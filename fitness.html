@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness - LifeMirror 3.0</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+
+    <nav class="sidebar">
+        <div class="sidebar-logo"><i data-feather="feather"></i></div>
+        <ul class="sidebar-menu" id="sidebar-menu">
+            <li class="menu-item" data-page="index.html" title="Dashboard"><i data-feather="grid"></i></li>
+            <li class="menu-item" data-page="tasks.html" title="Tasks"><i data-feather="check-square"></i></li>
+            <li class="menu-item" data-page="finance.html" title="Finance"><i data-feather="credit-card"></i></li>
+            <li class="menu-item" data-page="fitness.html" title="Fitness"><i data-feather="heart"></i></li>
+            <li class="menu-item" data-page="mood.html" title="Mood"><i data-feather="smile"></i></li>
+            <li class="menu-item" data-page="vault.html" title="Vault"><i data-feather="lock"></i></li>
+            <li class="menu-item" data-page="insights.html" title="Insights"><i data-feather="bar-chart-2"></i></li>
+        </ul>
+        <div class="sidebar-footer">
+            <li class="menu-item" data-page="settings.html" title="Settings"><i data-feather="settings"></i></li>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="date-time"><span id="current-time">00:30</span><span>Sunday, 26 October 2025</span></div>
+            <div class="global-controls">
+                <div class="control-icon-wrapper"><i data-feather="bell"></i></div><img
+                    src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic">
+            </div>
+        </header>
+
+        <section class="hero-header">
+            <div class="hero-welcome">
+                <h2>Fitness & Health</h2>
+                <p>Your aggregated steps, workouts, calories, and sleep data.</p>
+            </div>
+            <div class="header-actions">
+                <button class="add-new-button secondary">
+                    <i data-feather="plus-circle"></i> Log Activity
+                </button>
+                <button class="add-new-button">
+                    <i data-feather="plus"></i> Add Manual Entry
+                </button>
+            </div>
+        </section>
+
+        <section class="page-grid">
+
+            <div class="fitness-stats" style="grid-column: span 3;">
+                <div class="card kpi-card">
+                    <p class="kpi-label">Steps Today</p>
+                    <p class="kpi-value">5,000</p>
+                </div>
+                <div class="card kpi-card">
+                    <p class="kpi-label">Calories Burned</p>
+                    <p class="kpi-value">1,200</p>
+                </div>
+                <div class="card kpi-card">
+                    <p class="kpi-label">Workouts This Week</p>
+                    <p class="kpi-value">2</p>
+                </div>
+                <div class="card kpi-card">
+                    <p class="kpi-label">Sleep (Last Night)</p>
+                    <p class="kpi-value">8 hr</p>
+                </div>
+            </div>
+
+            <div class="card fitness-trends">
+                <h3>7-Day Trends</h3>
+                <div class="chart-placeholder-large chart-visual">
+                    <i data-feather="bar-chart-2"></i>
+                    <span>Trend Chart</span>
+                    <div class="chart-bars">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card health-suggestions">
+                <h3>Health Suggestions</h3>
+                <ul class="suggestion-list">
+                    <li class="suggestion-item">
+                        <i data-feather="coffee"></i>
+                        <p>Consider taking a 30 min rest.</p>
+                    </li>
+                    <li class="suggestion-item">
+                        <i data-feather="wind"></i>
+                        <p>Aim for a 10 min walk today.</p>
+                    </li>
+                    <li class="suggestion-item">
+                        <i data-feather="droplet"></i>
+                        <p>Stay hydrated - drink more water.</p>
+                    </li>
+                </ul>
+            </div>
+
+        </section>
+    </main>
+    <script>
+        feather.replace()
+    </script>
+    <script src="script.js"></script>
+</body>
+
+</html>

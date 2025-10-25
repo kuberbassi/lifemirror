@@ -1,0 +1,1131 @@
+/* =======================
+   1. "Elegant Matte" Theme
+   ======================= */
+:root {
+  /* Palette */
+  --c-primary: #00c7a6;
+  /* Nature Green */
+  --c-text-dark: #050316;
+  --c-text-muted: #555;
+  --c-bg-main: #f4f6f9;
+  /* Calmer, slightly blue-ish white */
+  --c-bg-card: #FFFFFF;
+  --c-border: 1px solid #EAEAEA;
+  --c-accent-red: #c62828;
+  --c-accent-yellow: #f9a825;
+  --c-accent-blue: #0277bd;
+
+  /* Style */
+  --card-radius: 16px;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+  /* Fonts */
+  --f-mono: 'Fira Code', monospace;
+  --f-sans: 'Inter', sans-serif;
+
+  --font-h2: 600 33px/1.3 var(--f-sans);
+  --font-h3: 600 18px/1.4 var(--f-sans);
+  /* Card Titles */
+  --font-body: 400 16px/1.6 var(--f-sans);
+  --font-caption: 500 14px/1.4 var(--f-sans);
+  --font-kpi: 700 36px/1.2 var(--f-sans);
+  /* Big numbers */
+}
+
+body {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  font: var(--font-body);
+  color: var(--c-text-dark);
+  background-color: var(--c-bg-main);
+
+  /* CRITICAL: This creates the horizontal layout */
+  display: flex;
+
+  overflow: hidden;
+  /* Prevents the whole page from scrolling */
+}
+
+/* =======================
+   2. Layout: Sidebar
+   ======================= */
+.sidebar {
+  width: 80px;
+  height: 100vh;
+  background: var(--c-bg-card);
+  padding: 24px 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  border-right: var(--c-border);
+}
+
+/* ... (all other sidebar styles are unchanged) ... */
+.sidebar-logo {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--c-primary);
+  border-radius: 12px;
+  color: var(--c-text-dark);
+}
+
+.sidebar-logo i {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-menu,
+.sidebar-footer {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.menu-item {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+}
+
+.menu-item i {
+  width: 20px;
+  height: 20px;
+}
+
+.menu-item:hover {
+  background: var(--c-bg-main);
+  color: var(--c-text-dark);
+}
+
+.menu-item.active {
+  background: var(--c-primary);
+  color: var(--c-text-dark);
+  box-shadow: 0 4px 12px rgba(0, 199, 166, 0.3);
+}
+
+
+/* =======================
+   3. Layout: Main Content
+   ======================= */
+.main-content {
+  /* CRITICAL: Allows this section to grow and fill space */
+  flex-grow: 1;
+
+  height: 100vh;
+  padding: 30px 40px 40px 40px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  /* Allows ONLY this section to scroll if needed */
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ... (all other top-bar styles are unchanged) ... */
+.date-time {
+  font: var(--font-caption);
+  font-family: var(--f-mono);
+  color: var(--c-text-muted);
+}
+
+.date-time #current-time {
+  font-weight: 600;
+  color: var(--c-text-dark);
+  margin-right: 16px;
+}
+
+.global-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.control-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.control-icon-wrapper:hover {
+  background: #e0e0e0;
+  color: var(--c-text-dark);
+}
+
+.profile-pic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--c-primary);
+}
+
+/* --- Page Header --- */
+.hero-header {
+  padding-bottom: 12px;
+  border-bottom: var(--c-border);
+}
+
+.hero-header h2 {
+  font: var(--font-h2);
+  margin: 0;
+}
+
+.hero-header p {
+  font: var(--font-body-lg);
+  color: var(--c-text-muted);
+  margin: 4px 0 0 0;
+}
+
+/* =======================
+   4. Bento Grid Layout
+   ======================= */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(150px, auto);
+  gap: 24px;
+  flex-grow: 1;
+  height: 100%;
+}
+
+.page-grid {
+  display: grid;
+  /* This creates 3 columns, but we'll use spans */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  flex-grow: 1;
+  /* Makes the grid fill the available vertical space */
+}
+
+.card {
+  border-radius: var(--card-radius);
+  padding: 24px;
+  background: var(--c-bg-card);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--c-border);
+  animation: fadeIn 0.5s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card h3 {
+  font: var(--font-h3);
+  margin: 0 0 20px 0;
+  color: var(--c-text-dark);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.card-header h3 {
+  margin: 0;
+}
+
+.card-header i {
+  color: var(--c-text-muted);
+}
+
+/* =======================
+   5. Card Spanning & Content
+   ======================= */
+
+/* --- Card 1: Life Score (2x2) --- */
+.life-score {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.life-score .card-metric {
+  font: var(--font-h1);
+  color: var(--c-text-dark);
+}
+
+.life-score-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  flex-grow: 1;
+}
+
+.radar-chart-placeholder {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: var(--c-bg-main);
+  border: var(--c-border);
+  display: grid;
+  place-items: center;
+  color: var(--c-text-muted);
+  font: var(--font-caption);
+}
+
+.score-weights {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font: var(--font-caption);
+}
+
+.score-weights li {
+  padding: 8px 0;
+  color: var(--c-text-muted);
+}
+
+/* --- Card 2: AI Remedies (2x1) --- */
+.ai-remedies {
+  grid-column: span 2;
+}
+
+.remedy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.remedy-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--c-bg-main);
+  font: var(--font-caption);
+  font-weight: 500;
+}
+
+.remedy-item p {
+  flex-grow: 1;
+  margin: 0;
+}
+
+.remedy-item[data-status="finance"] i {
+  color: var(--c-accent-yellow);
+}
+
+.remedy-item[data-status="health"] i {
+  color: var(--c-accent-blue);
+}
+
+.remedy-item[data-status="task"] i {
+  color: var(--c-text-muted);
+}
+
+.remedy-button {
+  font: var(--font-caption);
+  font-weight: 600;
+  background: var(--c-primary);
+  color: var(--c-text-dark);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remedy-button:hover {
+  filter: brightness(1.1);
+}
+
+/* --- Card 3: Tasks (2x1) --- */
+.tasks-schedule {
+  grid-column: span 2;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  font: var(--font-body);
+  font-weight: 500;
+}
+
+.task-item label {
+  margin-left: 12px;
+  color: var(--c-text-dark);
+}
+
+.task-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--c-primary);
+}
+
+.task-item input[type="checkbox"]:checked+label {
+  text-decoration: line-through;
+  color: var(--c-text-muted);
+}
+
+/* --- Card 4, 5, 6, 7: KPI & Heatmap Cards (1x1) --- */
+.kpi-card {
+  grid-column: span 1;
+}
+
+.kpi-value {
+  font: var(--font-kpi);
+  color: var(--c-text-dark);
+  margin: 0;
+}
+
+.kpi-label {
+  font: var(--font-caption);
+  color: var(--c-text-muted);
+  margin: 4px 0 0 0;
+}
+
+.heatmap-card {
+  grid-column: span 1;
+}
+
+.heatmap-placeholder {
+  width: 100%;
+  flex-grow: 1;
+  border-radius: 12px;
+  background: var(--c-bg-main);
+  border: var(--c-border);
+  display: grid;
+  place-items: center;
+  color: var(--c-text-muted);
+  font: var(--font-caption);
+}
+
+/* --- Page-Specific: Finance --- */
+.bill-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bill-item {
+  display: flex;
+  align-items: center;
+  background: var(--c-bg-main);
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.bill-item .icon {
+  font-size: 24px;
+  margin-right: 16px;
+}
+
+.bill-item .details {
+  flex-grow: 1;
+}
+
+.bill-item .details p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.bill-item .details span {
+  font: var(--font-caption);
+  color: var(--c-text-muted);
+}
+
+.bill-item .due-date {
+  font-weight: 600;
+  margin-right: 20px;
+}
+
+.bill-item .pay-button {
+  font: var(--font-button);
+  background: var(--c-primary);
+  color: var(--c-text-dark);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+}
+
+.bill-item.overdue .due-date {
+  color: var(--c-accent-red);
+}
+
+/* --- Page-Specific: Fitness --- */
+.fitness-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.chart-placeholder-large {
+  width: 100%;
+  min-height: 300px;
+  border-radius: 12px;
+  background: var(--c-bg-main);
+  border: var(--c-border);
+  display: grid;
+  place-items: center;
+  color: var(--c-text-muted);
+  font: var(--font-caption);
+}
+
+.card.fitness-trends {
+  grid-column: span 2;
+}
+
+.card.health-suggestions {
+  grid-column: span 1;
+}
+
+.suggestion-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--c-bg-main);
+  padding: 12px;
+  border-radius: 12px;
+  font: var(--font-caption);
+  font-weight: 500;
+}
+
+.suggestion-item i {
+  color: var(--c-accent-blue);
+}
+
+/* --- Page-Specific: Vault --- */
+.vault-locked {
+  width: 100%;
+  flex-grow: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  background: var(--c-bg-main);
+  border-radius: 12px;
+  border: var(--c-border);
+}
+
+.vault-locked i {
+  width: 48px;
+  height: 48px;
+  color: var(--c-text-muted);
+}
+
+.vault-locked p {
+  font: var(--font-h3);
+  margin-top: 16px;
+}
+
+.vault-locked .unlock-button {
+  font: var(--font-button);
+  font-size: 16px;
+  background: var(--c-primary);
+  color: var(--c-text-dark);
+  border: none;
+  border-radius: 8px;
+  padding: 16px 32px;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+.vault-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.vault-item {
+  background: var(--c-bg-main);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  font: var(--font-caption);
+  font-weight: 600;
+}
+
+.vault-item i {
+  width: 32px;
+  height: 32px;
+  color: var(--c-primary);
+  margin-bottom: 12px;
+}
+
+/* --- Page-Specific: Tasks --- */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-item {
+  font: var(--font-caption);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  transition: all 0.2s ease;
+}
+
+.filter-item:hover {
+  background-color: var(--c-bg-main);
+  color: var(--c-text-dark);
+}
+
+.filter-item.active {
+  background-color: var(--c-primary);
+  color: var(--c-text-dark);
+  font-weight: 600;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  font: var(--font-body);
+  font-weight: 500;
+  padding: 8px 0;
+  /* Add padding for better spacing */
+  border-bottom: var(--c-border);
+  /* Separate tasks */
+}
+
+.task-item:last-child {
+  border-bottom: none;
+  /* No border on last item */
+}
+
+.task-item label {
+  flex-grow: 1;
+  /* Pushes tag to the right */
+  margin-left: 12px;
+  color: var(--c-text-dark);
+}
+
+.task-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--c-primary);
+  flex-shrink: 0;
+  /* Prevent checkbox shrinking */
+}
+
+.task-item input[type="checkbox"]:checked+label {
+  text-decoration: line-through;
+  color: var(--c-text-muted);
+}
+
+.task-tag {
+  font: var(--font-caption);
+  font-size: 12px;
+  /* Make tags smaller */
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-left: 16px;
+  /* Space between label and tag */
+  flex-shrink: 0;
+}
+
+/* Priority Tag Colors */
+.task-tag.high {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.task-tag.medium {
+  background: #fff8e1;
+  color: #f9a825;
+}
+
+.task-tag.low {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* --- Additions for Tasks Page --- */
+
+/* Modify card-header to make space for the button */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* Vertically align items */
+  margin-bottom: 20px;
+}
+
+.card-header h3 {
+  margin: 0;
+  /* Remove default margin */
+}
+
+/* Push the filter bar and button away from the title */
+.card-header .filter-bar {
+  margin-left: auto;
+  /* Pushes filter bar towards the right */
+  margin-right: 16px;
+  /* Space between filter and button */
+}
+
+/* Style the Add Task Button */
+.add-task-button {
+  font: var(--font-button);
+  background: var(--c-primary);
+  color: var(--c-text-dark);
+  /* Dark text on green button */
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  /* Align icon and text */
+  align-items: center;
+  gap: 8px;
+  /* Space between icon and text */
+}
+
+.add-task-button i {
+  width: 16px;
+  /* Smaller icon for button */
+  height: 16px;
+}
+
+.add-task-button:hover {
+  filter: brightness(1.1);
+}
+
+/* --- Additions for Finance Page --- */
+
+/* Ensure hero-header uses flexbox */
+.hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* Align title and button vertically */
+  padding-bottom: 12px;
+  border-bottom: var(--c-border);
+}
+
+/* Style the Add New Button (similar to add-task-button) */
+.add-new-button {
+  font: var(--font-button);
+  background: var(--c-primary);
+  color: var(--c-text-dark);
+  /* Dark text on green button */
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  /* Align icon and text */
+  align-items: center;
+  gap: 8px;
+  /* Space between icon and text */
+  flex-shrink: 0;
+  /* Prevent button from shrinking */
+}
+
+.add-new-button i {
+  width: 16px;
+  height: 16px;
+}
+
+.add-new-button:hover {
+  filter: brightness(1.1);
+}
+
+/* --- Additions for Fitness Page --- */
+
+/* Adjust hero-header to accommodate button group */
+.hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* Align title and buttons vertically */
+  padding-bottom: 12px;
+  border-bottom: var(--c-border);
+}
+
+/* Container for header buttons */
+.header-actions {
+  display: flex;
+  gap: 12px;
+  /* Space between buttons */
+  flex-shrink: 0;
+}
+
+/* Style the Add New Button (Already exists, slight refinement) */
+.add-new-button {
+  font: var(--font-button);
+  background: var(--c-primary);
+  color: var(--c-text-dark);
+  /* Dark text on green button */
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  /* Align icon and text */
+  align-items: center;
+  gap: 8px;
+  /* Space between icon and text */
+}
+
+.add-new-button i {
+  width: 16px;
+  height: 16px;
+}
+
+.add-new-button:hover {
+  filter: brightness(1.1);
+}
+
+/* Secondary button style (e.g., for less frequent actions) */
+.add-new-button.secondary {
+  background: var(--c-bg-card);
+  /* White background */
+  color: var(--c-text-dark);
+  /* Dark text */
+  border: var(--c-border);
+  /* Subtle border */
+}
+
+.add-new-button.secondary:hover {
+  background: var(--c-bg-main);
+  /* Light gray hover */
+  filter: none;
+  /* Remove brightness filter */
+}
+/* --- Additions for Vault Page --- */
+
+.search-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    background-color: var(--c-bg-main);
+    border-radius: 8px;
+    padding: 8px 12px;
+    border: var(--c-border);
+}
+.search-input-wrapper i {
+    color: var(--c-text-muted);
+    margin-right: 8px;
+    width: 18px;
+    height: 18px;
+}
+.search-input-wrapper input {
+    border: none;
+    background: none;
+    outline: none;
+    font: var(--font-body);
+    color: var(--c-text-dark);
+}
+.search-input-wrapper input::placeholder {
+    color: var(--c-text-muted);
+}
+
+/* Re-using filter-bar styles from Tasks page */
+.filter-bar {
+    display: flex;
+    gap: 8px;
+}
+/* ... (filter-item styles already exist) ... */
+
+
+.vault-grid {
+    display: grid;
+    /* Responsive grid: min 150px width, max 1fr */
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
+    margin-top: 20px; /* Space below header */
+}
+
+.vault-item {
+    background: var(--c-bg-main);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    border: var(--c-border);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.vault-item:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--card-shadow);
+}
+
+.vault-item i {
+    width: 32px;
+    height: 32px;
+    color: var(--c-primary); /* Green icons */
+    margin-bottom: 12px;
+}
+.vault-item p {
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: var(--c-text-dark);
+}
+.vault-item span {
+    font: var(--font-caption);
+    color: var(--c-text-muted);
+}
+.vault-item.add-new i {
+    color: var(--c-text-muted);
+}
+.vault-item.add-new:hover i {
+     color: var(--c-primary);
+}
+
+
+/* Placeholder styles for locked state (If you implement the JS toggle) */
+.vault-locked {
+    width: 100%;
+    min-height: 400px; /* Ensure it takes up space */
+    display: grid;
+    place-items: center;
+    text-align: center;
+    background: var(--c-bg-main);
+    border-radius: 12px;
+    border: var(--c-border);
+}
+.vault-locked i {
+    width: 48px;
+    height: 48px;
+    color: var(--c-text-muted);
+}
+.vault-locked p {
+    font: var(--font-h3);
+    margin-top: 16px;
+    color: var(--c-text-dark);
+}
+.unlock-button {
+    font: var(--font-button);
+    font-size: 16px;
+    background: var(--c-primary);
+    color: var(--c-text-dark);
+    border: none;
+    border-radius: 8px;
+    padding: 16px 32px;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: filter 0.2s ease;
+}
+.unlock-button:hover {
+    filter: brightness(1.1);
+}
+/* --- Additions for Settings Page --- */
+
+.settings-card h3 {
+    margin-bottom: 12px; /* Less space below title */
+}
+
+.setting-description {
+    font: var(--font-caption);
+    color: var(--c-text-muted);
+    margin-top: -8px; /* Pull description closer to title */
+    margin-bottom: 24px;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: var(--c-border);
+}
+.settings-card .setting-item:last-of-type {
+    border-bottom: none; /* No border on last item in a card */
+}
+
+.setting-item label {
+    font-weight: 500;
+    color: var(--c-text-dark);
+}
+
+/* Simple Toggle Switch Style */
+.toggle-switch {
+    appearance: none;
+    width: 40px;
+    height: 24px;
+    background-color: #ccc; /* Off state */
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+.toggle-switch::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s ease-in-out;
+}
+.toggle-switch:checked {
+    background-color: var(--c-primary); /* Green 'On' state */
+}
+.toggle-switch:checked::before {
+    transform: translateX(16px); /* Move the circle to the right */
+}
+
+.setting-divider {
+    border: none;
+    border-top: var(--c-border);
+    margin: 24px 0;
+}
+
+.placeholder-text {
+    font: var(--font-caption);
+    color: var(--c-text-muted);
+    text-align: center;
+    padding: 20px;
+    background: var(--c-bg-main);
+    border-radius: 8px;
+    margin-top: 16px;
+}
+/* --- Additions for Insights Page & Chart Placeholders --- */
+
+/* Adjust grid for Insights page to accommodate 4 summary cards */
+.insights-grid {
+    grid-template-columns: repeat(4, 1fr); /* 4 columns for summary */
+}
+/* Ensure the large cards below still span correctly */
+.insights-grid .card[style*="grid-column: span 2"] {
+    grid-column: span 2; /* Explicitly set span for clarity */
+}
+.insights-grid .card[style*="grid-column: span 1"] {
+    grid-column: span 2; /* Make AI feed span 2 */
+}
+
+
+/* Gamification / Badge Placeholder Style */
+.badge-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px; /* Space above badges */
+}
+.badge-placeholder i {
+    width: 28px;
+    height: 28px;
+}
+.badge-placeholder span {
+    font: var(--font-caption);
+    color: var(--c-text-muted);
+    margin-left: 4px;
+}
+
+/* Enhanced Chart/Heatmap Placeholder Styles */
+.chart-visual { /* Add this class to all placeholders */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    color: var(--c-text-muted);
+    font: var(--font-caption);
+    height: 100%; /* Ensure it fills the placeholder div */
+    min-height: 100px; /* Minimum height */
+}
+.chart-visual i {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+}
+/* Simple bar chart visual */
+.chart-bars {
+    display: flex;
+    gap: 4px;
+    height: 40px; /* Height of bars */
+    align-items: flex-end; /* Bars grow from bottom */
+    margin-top: 12px;
+}
+.chart-bars div {
+    width: 10px; /* Width of each bar */
+    background-color: #e0e0e0; /* Light gray bars */
+    border-radius: 2px;
+}
+/* Vary heights for visual interest */
+.chart-bars div:nth-child(1) { height: 60%; }
+.chart-bars div:nth-child(2) { height: 80%; }
+.chart-bars div:nth-child(3) { height: 40%; }
+.chart-bars div:nth-child(4) { height: 70%; }
+.chart-bars div:nth-child(5) { height: 50%; }
+
+/* Ensure placeholders take up space */
+.radar-chart-placeholder,
+.heatmap-placeholder,
+.chart-placeholder-large {
+    width: 100%;
+    flex-grow: 1;
+    border-radius: 12px;
+    background: var(--c-bg-main);
+    border: var(--c-border);
+    display: grid; /* Use grid to center content */
+    place-items: center;
+}

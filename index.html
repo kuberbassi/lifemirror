@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>LifeMirror 3.0 (Bento Grid)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <i data-feather="feather"></i>
+        </div>
+
+        <ul class="sidebar-menu" id="sidebar-menu">
+            <li class="menu-item" data-page="index.html" title="Dashboard"><i data-feather="grid"></i></li>
+            <li class="menu-item" data-page="tasks.html" title="Tasks"><i data-feather="check-square"></i></li>
+            <li class="menu-item" data-page="finance.html" title="Finance"><i data-feather="credit-card"></i></li>
+            <li class="menu-item" data-page="fitness.html" title="Fitness"><i data-feather="heart"></i></li>
+            <li class="menu-item" data-page="mood.html" title="Mood"><i data-feather="smile"></i></li>
+            <li class="menu-item" data-page="vault.html" title="Vault"><i data-feather="lock"></i></li>
+            <li class="menu-item" data-page="insights.html" title="Insights"><i data-feather="bar-chart-2"></i></li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <li class="menu-item" data-page="settings.html"="Settings"><i data-feather="settings"></i></li>
+        </div>
+    </nav>
+
+    <main class="main-content">
+
+        <header class="top-bar">
+            <div class="date-time"><span id="current-time">00:01</span><span>Sunday, 26 October 2025</span></div>
+            <div class="global-controls">
+                <div class="control-icon-wrapper"><i data-feather="bell"></i></div><img
+                    src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic">
+            </div>
+        </header>
+
+        <section class="dashboard-grid">
+
+            <div class="card life-score">
+                <div class="card-header">
+                    <h3>Life Score</h3>
+                    <span class="card-metric" id="life-score-number">82</span>
+                </div>
+                <div class="life-score-content">
+                    <div class="radar-chart-placeholder chart-visual">
+                        <i data-feather="hexagon"></i>
+                        <span>Radar Chart</span>
+                    </div>
+                    <ul class="score-weights">
+                        <li>Tasks (25%)</li>
+                        <li>Financial Health (20%)</li>
+                        <li>Fitness (20%)</li>
+                        <li>Mood/Stress (20%)</li>
+                        <li>Digital Org (15%)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card ai-remedies">
+                <h3>Actions for Today</h3>
+                <ul class="remedy-list">
+                    <li class="remedy-item" data-status="finance"><i data-feather="alert-triangle"></i>
+                        <p>Overdue: Netflix Bill. Pay Now.</p><button class="remedy-button">Pay</button>
+                    </li>
+                    <li class="remedy-item" data-status="health"><i data-feather="moon"></i>
+                        <p>Low Sleep detected. Schedule a 30-min break.</p><button
+                            class="remedy-button">Schedule</button>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card tasks-schedule">
+                <h3>Today's Schedule</h3>
+                <ul class="task-list" id="task-list-container">
+                    <li class="task-item">
+                        <input type="checkbox" id="task1" data-points="5">
+                        <label for="task1">Finalize project report</label>
+                    </li>
+                    <li class="task-item">
+                        <input type="checkbox" id="task2" data-points="2">
+                        <label for="task2">Call with team</label>
+                    </li>
+                    <li class="task-item">
+                        <input type="checkbox" id="task3" data-points="3">
+                        <label for="task3">Pay electricity bill</label>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card kpi-card">
+                <div class="card-header">
+                    <h3>Mood</h3><i data-feather="smile"></i>
+                </div>
+                <p class="kpi-value">Happy</p>
+                <p class="kpi-label">Stress Index: 45%</p>
+            </div>
+
+            <div class="card kpi-card">
+                <div class="card-header">
+                    <h3>Daily Steps</h3><i data-feather="trending-up"></i>
+                </div>
+                <p class="kpi-value">5,000</p>
+                <p class="kpi-label">7-day trend</p>
+            </div>
+
+            <div class="card kpi-card">
+                <div class="card-header">
+                    <h3>Finance</h3><i data-feather="credit-card"></i>
+                </div>
+                <p class="kpi-value">+₹21,000</p>
+                <p class="kpi-label">3 Bills Due</p>
+            </div>
+
+            <div class="card kpi-card digital-assets">
+                <div class="card-header">
+                    <h3>Digital Assets</h3><i data-feather="lock"></i>
+                </div>
+                <p class="kpi-value">Secured</p>
+                <p class="kpi-label">3 Files, 12 Passwords</p>
+            </div>
+
+        </section>
+    </main>
+    <script>feather.replace()</script>
+    <script src="script.js"></script>
+</body>
+
+</html>
