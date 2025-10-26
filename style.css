@@ -1562,3 +1562,351 @@ body {
     align-items: center;
     justify-content: center;
 }
+/* --- Settings AI Input Field Style --- */
+/* Ensures the dynamically injected input field has consistent styling */
+#ai-processor-container input[type="text"] {
+    font: var(--font-body);
+    color: var(--c-text-dark);
+    /* Overrides the background set by .placeholder-text */
+    background: var(--c-bg-card) !important; 
+    border: var(--c-border);
+    transition: border-color 0.2s;
+}
+
+#ai-processor-container input[type="text"]:focus {
+    border-color: var(--c-primary);
+}
+
+/* --- New Settings Page Styles --- */
+/* Reusing modal form group styles for the profile inputs */
+.settings-card .modal-form-group {
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+}
+
+.settings-card .modal-form-group label {
+    font: var(--font-caption);
+    font-weight: 600;
+    color: var(--c-text-dark);
+    margin-bottom: 6px;
+}
+
+.settings-card .modal-form-group input {
+    font: var(--font-body);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: var(--c-border);
+    background: var(--c-bg-main);
+    outline: none;
+}
+
+.settings-card .modal-form-group input:disabled {
+    background: #f0f0f0;
+    color: var(--c-text-muted);
+}
+
+/* Style for Danger Zone buttons */
+.setting-item.danger-item {
+    border-top: 1px dashed var(--c-border);
+    padding-top: 18px;
+    padding-bottom: 18px;
+}
+
+.modal-button.delete {
+    background: var(--c-accent-red);
+    color: var(--c-text-light);
+}
+
+.modal-button.delete:hover {
+    filter: brightness(1.1);
+}
+/* --- Settings AI Input Field Style --- */
+/* Ensures the dynamically injected input field has consistent styling */
+#ai-processor-container input[type="text"] {
+    font: var(--font-body);
+    color: var(--c-text-dark);
+    /* Overrides the background set by .placeholder-text */
+    background: var(--c-bg-card) !important; 
+    border: var(--c-border);
+    transition: border-color 0.2s;
+}
+
+#ai-processor-container input[type="text"]:focus {
+    border-color: var(--c-primary);
+}
+
+/* --- New Settings Page Styles --- */
+/* Reusing modal form group styles for the profile inputs */
+.settings-card .modal-form-group {
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+}
+
+.settings-card .modal-form-group label {
+    font: var(--font-caption);
+    font-weight: 600;
+    color: var(--c-text-dark);
+    margin-bottom: 6px;
+}
+
+.settings-card .modal-form-group input {
+    font: var(--font-body);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: var(--c-border);
+    background: var(--c-bg-main);
+    outline: none;
+}
+
+.settings-card .modal-form-group input:disabled {
+    background: #f0f0f0;
+    color: var(--c-text-muted);
+}
+
+/* Style for Danger Zone buttons */
+.setting-item.danger-item {
+    border-top: 1px dashed var(--c-border);
+    padding-top: 18px;
+    padding-bottom: 18px;
+}
+
+.modal-button.delete {
+    background: var(--c-accent-red);
+    color: var(--c-text-light);
+}
+
+.modal-button.delete:hover {
+    filter: brightness(1.1);
+}
+
+/* Import Button Styles (to show the "overwrite" warning state) */
+.modal-button.warning {
+    background-color: var(--c-accent-yellow);
+    color: var(--c-text-dark);
+    font-weight: 600;
+}
+.modal-button.warning:hover {
+    filter: brightness(1.1);
+}
+
+/* Data control container to align button */
+.setting-item .import-control {
+    display: flex;
+    justify-content: flex-end;
+}
+/* --- Settings Page CSS Overrides for Button Alignment --- */
+
+/* Ensures button text/icon alignment is always centered */
+.settings-card .modal-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px; /* Slightly adjusted padding for vertical symmetry */
+}
+
+/* Fixes alignment issue in setting-item to make sure the right side aligns properly */
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* Vertically align items */
+    padding: 16px 0;
+    border-bottom: var(--c-border);
+}
+
+/* Specific adjustment for the Import/Export row to ensure text stays left and button is right */
+.setting-item .import-control,
+.setting-item .modal-button:not(#delete-data-button) {
+    /* Prevents the buttons from resizing and ensures they align visually */
+    flex-shrink: 0; 
+}
+/* --- Global Notification Panel Styles --- */
+#global-notification-panel {
+    position: fixed;
+    top: 70px; /* Aligns below the header bar */
+    right: 40px;
+    width: 350px;
+    max-height: 500px;
+    background: var(--c-bg-card);
+    border-radius: var(--card-radius);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border: var(--c-border);
+    z-index: 1000;
+    overflow-y: auto;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    padding: 15px 0;
+    transform: translateY(-10px);
+    opacity: 0;
+    transition: all 0.2s ease-out;
+}
+
+#global-notification-panel.active {
+    display: flex;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+#global-notification-panel h4 {
+    font: var(--font-caption);
+    font-weight: 700;
+    color: var(--c-text-dark);
+    padding: 0 20px 10px 20px;
+    margin: 0;
+    border-bottom: var(--c-border);
+}
+
+.notification-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px dashed #eee;
+    transition: background 0.1s;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background: var(--c-bg-main);
+}
+
+.notification-item i {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.notification-item p {
+    font: var(--font-caption);
+    font-weight: 500;
+    margin: 0;
+}
+
+.notification-item.critical i {
+    color: var(--c-accent-red);
+}
+
+.notification-item.low i {
+    color: var(--c-primary);
+}
+
+.notification-item-empty {
+    padding: 20px;
+    text-align: center;
+    font: var(--font-caption);
+    color: var(--c-text-muted);
+}
+/* --- Global Notification Panel Styles --- */
+#global-notification-panel {
+    position: fixed;
+    top: 70px; /* Aligns below the header bar */
+    right: 40px;
+    width: 350px;
+    max-height: 500px;
+    background: var(--c-bg-card);
+    border-radius: var(--card-radius);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border: var(--c-border);
+    z-index: 1000;
+    overflow-y: auto;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    padding: 15px 0;
+    transform: translateY(-10px);
+    opacity: 0;
+    transition: all 0.2s ease-out;
+}
+
+#global-notification-panel.active {
+    display: flex;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* --- Global Notification Panel Styles (NEW) --- */
+#global-notification-panel {
+    /* Critical for placing it on top right */
+    position: fixed;
+    top: 70px; 
+    right: 40px;
+    
+    /* Appearance and Layout */
+    width: 350px;
+    max-height: 500px;
+    background: var(--c-bg-card);
+    border-radius: var(--card-radius);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border: var(--c-border);
+    z-index: 1000;
+    overflow-y: auto;
+    
+    /* Hiding mechanism */
+    display: none; 
+    flex-direction: column;
+    padding: 15px 0;
+    
+    /* Animation (Hidden state) */
+    transform: translateY(-10px);
+    opacity: 0;
+    transition: all 0.2s ease-out;
+}
+
+/* State when JS makes it visible */
+#global-notification-panel.active {
+    display: flex; /* Makes the box visible */
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* Content Styling */
+#global-notification-panel h4 {
+    font: var(--font-caption);
+    font-weight: 700;
+    color: var(--c-text-dark);
+    padding: 0 20px 10px 20px;
+    margin: 0;
+    border-bottom: var(--c-border);
+}
+
+.notification-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px dashed #eee;
+    transition: background 0.1s;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background: var(--c-bg-main);
+}
+
+.notification-item i {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.notification-item p {
+    font: var(--font-caption);
+    font-weight: 500;
+    margin: 0;
+}
+
+.notification-item.critical i {
+    color: var(--c-accent-red);
+}
+
+.notification-item.low i {
+    color: var(--c-primary);
+}
+
+.notification-item-empty {
+    padding: 20px;
+    text-align: center;
+    font: var(--font-caption);
+    color: var(--c-text-muted);
+}

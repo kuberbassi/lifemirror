@@ -11,6 +11,17 @@
 </head>
 <body>
 
+    <div class="modal-overlay" id="delete-data-confirm-modal" style="display: none;">
+        <div class="modal-dialog" style="max-width: 400px; text-align: center;">
+            <h3 style="color: var(--c-accent-red); margin-bottom: 8px;"><i data-feather="alert-triangle" style="width: 24px; height: 24px;"></i> Confirm Data Destruction</h3>
+            <p style="margin-bottom: 24px; color: var(--c-text-dark);">This will erase **ALL** your tasks, bills, mood history, and links. This cannot be undone.</p>
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 0;">
+                <button class="modal-button secondary" id="delete-data-cancel-button">Cancel</button>
+                <button class="modal-button delete" id="delete-data-confirm-button">Erase Data</button>
+            </div>
+        </div>
+    </div>
+    
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
         <ul class="sidebar-menu" id="sidebar-menu">
@@ -32,39 +43,63 @@
             <div class="date-time"><span id="current-time">00:50</span><span>Sunday, 26 October 2025</span></div>
             <div class="global-controls"><div class="control-icon-wrapper"><i data-feather="bell"></i></div><img src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic"></div>
         </header>
-
+        <div id="global-notification-panel"></div>
         <section class="hero-header">
-            <h2>Settings</h2>
-            <p>Customize your LifeMirror experience.</p>
+            <h2>Settings & Administration</h2>
+            <p>Customize and administer your LifeMirror experience. You have full control.</p>
         </section>
 
         <section class="page-grid" style="grid-template-columns: 1fr 1fr; gap: 30px;">
-
-            <div class="card settings-card">
-                <h3>Dashboard Customization</h3>
-                <p class="setting-description">Choose which summary tiles appear on your main dashboard.</p>
+            
+            <div class="card settings-card" style="grid-column: span 1;">
+                <h3>Account & Profile</h3>
+                <p class="setting-description">Manage your personal information and profile settings.</p>
+                <div class="modal-form-group">
+                    <label for="profile-name-input">Full Name</label>
+                    <input type="text" id="profile-name-input" value="Kuber Bassi">
+                </div>
+                <div class="modal-form-group">
+                    <label for="profile-email-input">Email Address</label>
+                    <input type="email" id="profile-email-input" value="kuberbassi@example.com" disabled>
+                </div>
+                <div class="modal-form-group">
+                    <label for="profile-password-input">Password (Mock Reset)</label>
+                    <input type="password" id="profile-password-input" value="********">
+                </div>
+                <button class="add-new-button secondary" style="width: 100%; margin-top: 20px;" id="save-profile-button">
+                     <i data-feather="save"></i> Save Profile Changes
+                </button>
+            </div>
+            
+            <div class="card settings-card" style="grid-column: span 1;">
+                <h3>Dashboard & Visuals</h3>
                 <div class="setting-item">
-                    <label for="toggle-tasks">Tasks & Meetings Tile</label>
-                    <input type="checkbox" id="toggle-tasks" class="toggle-switch" checked>
+                    <label for="toggle-dark-mode">Enable Dark Mode</label>
+                    <input type="checkbox" id="toggle-dark-mode" class="toggle-switch">
                 </div>
                 <div class="setting-item">
-                    <label for="toggle-finance">Finance & Bills Tile</label>
-                    <input type="checkbox" id="toggle-finance" class="toggle-switch" checked>
+                    <label for="toggle-task-summary">Tasks & Meetings Tile</label>
+                    <input type="checkbox" id="toggle-task-summary" class="toggle-switch" checked>
                 </div>
                 <div class="setting-item">
-                    <label for="toggle-fitness">Fitness & Health Tile</label>
-                    <input type="checkbox" id="toggle-fitness" class="toggle-switch" checked>
+                    <label for="toggle-finance-summary">Finance & Bills Tile</label>
+                    <input type="checkbox" id="toggle-finance-summary" class="toggle-switch" checked>
                 </div>
                 <div class="setting-item">
-                    <label for="toggle-mood">Mood & Stress Tile</label>
-                    <input type="checkbox" id="toggle-mood" class="toggle-switch" checked>
+                    <label for="toggle-fitness-summary">Fitness & Health Tile</label>
+                    <input type="checkbox" id="toggle-fitness-summary" class="toggle-switch" checked>
+                </div>
+                <div class="setting-item">
+                    <label for="toggle-mood-summary">Mood & Stress Tile</label>
+                    <input type="checkbox" id="toggle-mood-summary" class="toggle-switch" checked>
                 </div>
                  <div class="setting-item">
-                    <label for="toggle-assets">Digital Assets Tile</label>
-                    <input type="checkbox" id="toggle-assets" class="toggle-switch"> </div>
+                    <label for="toggle-assets-summary">Social Hub Tile</label>
+                    <input type="checkbox" id="toggle-assets-summary" class="toggle-switch"> 
+                </div>
             </div>
 
-            <div class="card settings-card">
+            <div class="card settings-card" style="grid-column: span 1;">
                 <h3>Focus & Notifications</h3>
                 <div class="setting-item">
                     <label for="toggle-focus">Enable Focus Mode</label>
@@ -78,26 +113,51 @@
                     <label for="toggle-smart-notify">Enable Smart Notifications</label>
                     <input type="checkbox" id="toggle-smart-notify" class="toggle-switch" checked>
                 </div>
-            </div>
-
-            <div class="card settings-card">
-                 <h3>Integrations</h3>
-                 <p class="setting-description">Connect your accounts (Google Calendar, Bank APIs, etc.).</p>
-                 <div class="placeholder-text">Integration management options would go here.</div>
-            </div>
-
-
-            <div class="card settings-card">
-                <h3>Privacy & Sharing</h3>
-                 <p class="setting-description">Manage data privacy and sharing settings.</p>
                  <div class="setting-item">
-                    <label for="toggle-sharing">Enable Family Sharing</label>
-                    <input type="checkbox" id="toggle-sharing" class="toggle-switch">
+                    <label for="toggle-sleep-reminder">Daily Sleep Reminder (6-10 AM)</label>
+                    <input type="checkbox" id="toggle-sleep-reminder" class="toggle-switch" checked>
                 </div>
-                 <div class="placeholder-text">Options for selecting data to share securely.</div>
+            </div>
+            
+            <div class="card settings-card" style="grid-column: span 1;">
+                 <h3>AI Integrations (Demo)</h3>
+                 <p class="setting-description">Simulate the advanced conversational AI that processes your daily chat input for automation.</p>
+                 <div class="placeholder-text" id="ai-processor-container">Integration management options would go here.</div>
+            </div>
+            
+            <div class="card settings-card" style="grid-column: span 2;">
+                <h3>Data Management & Control</h3>
+                <p class="setting-description">Exercise full control over your private data stored in LifeMirror. Data is stored locally for this prototype.</p>
+                
+                <div class="setting-item">
+                    <label>Import Data (JSON)</label>
+                    <div class="import-control">
+                        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                        <button class="modal-button secondary" id="import-data-button">
+                             <i data-feather="upload"></i> Select File
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <label for="export-data-button">Export All Data (.json)</label>
+                    <button class="modal-button secondary" id="export-data-button">
+                        <i data-feather="download"></i> Export Data
+                    </button>
+                </div>
+                
+                <div class="setting-item danger-item">
+                    <label for="delete-data-button" style="color: var(--c-accent-red); font-weight: 600;">Permanently Delete All Data</label>
+                    <button class="modal-button delete" id="delete-data-button">
+                        <i data-feather="trash-2"></i> Delete All
+                    </button>
+                </div>
             </div>
 
-        </section> </main> <script>
+        </section> 
+        
+    </main> 
+    <script>
       feather.replace()
     </script>
     <script src="script.js"></script>

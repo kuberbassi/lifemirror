@@ -3,6 +3,19 @@
 // ===============================================
 var calendar = null; // To hold the calendar instance
 let sleepCheckInterval = null; // Global to control the hourly sleep notification check
+// NEW GLOBAL MOCK STATE
+let IS_SMART_NOTIFICATIONS_MOCK = true; // Default state: ON
+
+// NEW GLOBAL MOCK NOTIFICATIONS STATE
+let mockNotifications = [
+    { id: 1, type: 'critical', message: 'Overdue: Netflix Bill. Pay Now!', link: 'finance.html', icon: 'alert-triangle' },
+    { id: 2, type: 'critical', message: 'High Stress Index (70%). Log a break.', link: 'mood.html', icon: 'zap' },
+    { id: 3, type: 'low', message: 'Project Report due tomorrow.', link: 'tasks.html', icon: 'check-square' },
+    { id: 4, type: 'low', message: 'Daily Sleep Reminder logged.', link: 'fitness.html', icon: 'moon' }
+];
+
+let IS_NOTIFICATION_PANEL_OPEN = false; // State to track panel visibility
+
 
 /**
  * Gets today's date in YYYY-MM-DD format
@@ -38,6 +51,83 @@ function showFlashMessage(message, iconName = 'check-circle') {
             container.removeChild(flash);
         }
     }, 5000);
+}
+
+// Function in LifeMirror/script.js to replace the existing one
+function toggleNotificationPanel() {
+    // 1. Check for the main panel placeholder
+    const panel = document.getElementById('global-notification-panel');
+    if (!panel) {
+        console.error("ERROR: #global-notification-panel HTML placeholder is missing on this page.");
+        return;
+    }
+
+    // 2. Safely check for the bell wrapper without crashing
+    const bellIcon = document.querySelector('.control-icon-wrapper i[data-feather="bell"]');
+    const bellWrapper = bellIcon ? bellIcon.closest('.control-icon-wrapper') : null;
+    
+    // Fallback check to prevent crash if bellWrapper is null (which causes the TypeError)
+    if (!bellWrapper) {
+         console.warn("Could not find the bell icon wrapper to apply active style.");
+    }
+    
+    // Toggle state
+    // We check if the panel is already open to prevent double-toggling in specific scenarios
+    const isCurrentlyOpen = panel.classList.contains('active');
+    // Update the global flag
+    IS_NOTIFICATION_PANEL_OPEN = !isCurrentlyOpen;
+    
+    if (IS_NOTIFICATION_PANEL_OPEN) {
+        // Render and Show
+        renderNotificationPanel(panel); 
+        panel.classList.add('active');
+        if (bellWrapper) {
+             bellWrapper.classList.add('active-notification'); // Apply visual indicator
+        }
+    } else {
+        // Hide
+        panel.classList.remove('active');
+        if (bellWrapper) {
+             bellWrapper.classList.remove('active-notification');
+        }
+    }
+}
+
+function renderNotificationPanel(panel) {
+    // Determine which alerts to show based on global state
+    // If Smart Notifications is ON (true), only show critical. Otherwise, show all.
+    const notifications = IS_SMART_NOTIFICATIONS_MOCK 
+        ? mockNotifications.filter(n => n.type === 'critical')
+        : mockNotifications; 
+
+    let content = '<h4>Notifications</h4>';
+    
+    if (notifications.length === 0) {
+        content += `<div class="notification-item-empty">You're all caught up!</div>`;
+    } else {
+        notifications.forEach(n => {
+            // Note: 'critical' is used for red icons, 'low' for blue/primary icons
+            content += `
+                <div class="notification-item ${n.type}" data-link="${n.link}">
+                    <i data-feather="${n.icon}"></i>
+                    <p>${n.message}</p>
+                </div>
+            `;
+        });
+    }
+    
+    panel.innerHTML = content;
+    feather.replace();
+    
+    // Attach event listeners for clicking an item
+    panel.querySelectorAll('.notification-item').forEach(item => {
+        item.addEventListener('click', () => {
+             const link = item.dataset.link;
+             if (link) {
+                 window.location.href = link;
+             }
+        });
+    });
 }
 
 /**
@@ -100,11 +190,23 @@ function startSleepNotificationCheck(fitnessHistory) {
 // ===============================================
 
 /**
- * Runs all logic for the Dashboard (index.html)
+ * Runs all logic for the Dashboard (index.html) - UPDATED FOR NOTIFICATION SYSTEM
  */
 function initializeDashboardPage() {
     const lifeScoreElement = document.getElementById('life-score-number');
+    const notificationPanel = document.getElementById('notification-panel');
     let currentScore = 82; 
+    
+    // Check global state for notifications
+    if (notificationPanel) {
+        if (IS_SMART_NOTIFICATIONS_MOCK) {
+            // Simulate that critical alerts exist and are shown
+            notificationPanel.style.display = 'flex'; 
+            notificationPanel.style.alignItems = 'center';
+        } else {
+            notificationPanel.style.display = 'none';
+        }
+    }
     
     function updateLifeScore(points) {
         if (!lifeScoreElement) return; 
@@ -140,6 +242,8 @@ function initializeDashboardPage() {
             if (remedyItem) remedyItem.classList.add('completed');
         });
     });
+    
+    feather.replace(); // Ensure the bell icon in the notification panel is rendered
 }
 
 /**
@@ -2011,32 +2115,297 @@ function initializeFinancePage() {
 
 
 
-/**
- * Runs all logic for the Insights Page (insights.html)
- */
-function initializeInsightsPage() {
-    const insightsRemedyButtons = document.querySelectorAll('.remedy-list .remedy-button');
-     insightsRemedyButtons.forEach(button => {
-         button.addEventListener('click', () => {
-             const remedyItem = button.closest('.remedy-item');
-             button.textContent = 'Viewed';
-             button.disabled = true;
-             if (remedyItem) remedyItem.classList.add('completed');
-         });
-     });
+// Add this mock function globally, or just define it at the top of initializeInsightsPage
+// so it can be used below. Since real-world finance is complex, we mock the payment process.
+function mockPayBill(billName) {
+    if (typeof showFlashMessage === 'function') {
+        showFlashMessage(`Simulating payment for ${billName}. Financial health updated.`, 'credit-card');
+    }
+    // In a production environment, this would call the actual markBillAsPaid() logic
+    // and trigger a re-render of the Finance page dashboard KPIs.
 }
 
 /**
- * Runs all logic for the Settings Page (settings.html)
+ * Runs all logic for the Insights Page (insights.html) - REVISED FOR ACTIONABLE REMEDIES
+ */
+function initializeInsightsPage() {
+    
+    // Simple mock function to simulate paying a bill
+    function mockPayBill(billName) {
+        if (typeof showFlashMessage === 'function') {
+            showFlashMessage(`Simulating payment for ${billName}. Financial health updated.`, 'credit-card');
+        }
+    }
+
+    const insightsRemedyButtons = document.querySelectorAll('.remedy-list .remedy-button');
+
+    insightsRemedyButtons.forEach(button => {
+        // Remove old listeners by cloning and replacing the element
+        const newButton = button.cloneNode(true);
+        button.replaceWith(newButton);
+        
+        const remedyItem = newButton.closest('.remedy-item');
+        const action = newButton.textContent.trim();
+        const status = remedyItem.dataset.status;
+        const buttonText = newButton.textContent;
+        
+        // Skip if already completed (not strictly needed here but good practice)
+        if (remedyItem.classList.contains('completed')) return;
+
+
+        newButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Check the action type and status
+            if (status === 'finance' && buttonText === 'Pay') {
+                const billName = remedyItem.querySelector('p').textContent.split(':')[1].split('.')[0].trim();
+                mockPayBill(billName);
+                newButton.textContent = 'Paid';
+                remedyItem.classList.add('completed');
+                
+            } else if (status === 'health' && buttonText === 'Plan') {
+                // Low Sleep Action
+                showFlashMessage("Plan acknowledged. You committed to adjusting your bedtime.", 'moon');
+                newButton.textContent = 'Planned';
+                remedyItem.classList.add('completed');
+                
+            } else if (status === 'task' && buttonText === 'Review') {
+                // Late Task Action
+                showFlashMessage("Review initiated. Check your tasks for deadline restructuring.", 'alert-circle');
+                newButton.textContent = 'Reviewed';
+                remedyItem.classList.add('completed');
+            }
+            
+            newButton.disabled = true;
+        });
+    });
+}
+
+/**
+ * Runs all logic for the Settings Page (settings.html) - REVISED FOR FULL CONTROL & AI PROCESSOR DEMO
  */
 function initializeSettingsPage() {
+    
+    // --- MOCK STATE VARIABLES for Toggles and Data Status ---
+    let HAS_MOCK_DATA = true; // True if the user has data, False if the profile is clean/empty.
+    let IS_DARK_MODE_MOCK = false;
+    let IS_FOCUS_MODE_MOCK = false;
+    // IS_SMART_NOTIFICATIONS_MOCK is now global and used here
+    
+    // --- 1. Core AI Processor Mock Function ---
+    function simulateAIProcessing(input) {
+        const output = [];
+        const lowerInput = input.toLowerCase();
+
+        // 1. Mood/Stress Logging
+        if (lowerInput.includes('stressed') || lowerInput.includes('bad mood')) {
+            output.push('Mood Logged: Sad (Stress Index: +10%)');
+        } else if (lowerInput.includes('great day') || lowerInput.includes('productive')) {
+             output.push('Mood Logged: Happy (Stress Index: -5%)');
+        }
+
+        // 2. Task/Schedule Logging
+        if (lowerInput.includes('need to finish the project report') || lowerInput.includes('deadline')) {
+            output.push('Task Added: "Finalize project report" (Priority: High, Due: Today)');
+        }
+        
+        // 3. Finance/Activity Logging (Sleep, Water, Payment)
+        if (lowerInput.includes('only slept 5 hours')) {
+            output.push('Sleep Logged: 5 hours (Flagged: Low Sleep Trend)');
+        } else if (lowerInput.includes('paid netflix') || lowerInput.includes('paid electricity')) {
+             output.push('Finance Action: Bill marked Paid. Next due date updated.');
+        }
+
+        // 4. Creative/Dev Activity Logging (Music/Code)
+        if (lowerInput.includes('practice guitar for an hour') || lowerInput.includes('worked on riff')) {
+            output.push('Activity Logged: Workout (Type: Guitar, Value: 60 min)');
+        }
+        
+        if (output.length === 0) {
+            output.push('No actionable data detected. Just listening... 👂');
+        }
+        return output;
+    }
+
+    // --- 2. UI Elements & State Update Functions ---
     const toggles = document.querySelectorAll('.toggle-switch');
-      toggles.forEach(toggle => {
-          toggle.addEventListener('change', () => {
-               const label = toggle.previousElementSibling.textContent;
-               console.log(`Setting "${label}" toggled to: ${toggle.checked}`);
-          });
-      });
+    const saveProfileButton = document.getElementById('save-profile-button');
+    const exportDataButton = document.getElementById('export-data-button');
+    const deleteDataButton = document.getElementById('delete-data-button');
+    const importDataButton = document.getElementById('import-data-button');
+    const importFileInput = document.getElementById('import-file-input');
+    const deleteConfirmModal = document.getElementById('delete-data-confirm-modal');
+    const deleteDataConfirmButton = document.getElementById('delete-data-confirm-button');
+    const deleteDataCancelButton = document.getElementById('delete-data-cancel-button');
+    const importControlDiv = document.querySelector('.import-control');
+
+
+    function updateImportState() {
+        if (!importDataButton) return;
+
+        // Apply visual and semantic changes based on mock data status
+        if (HAS_MOCK_DATA) {
+            // Data exists: Show overwrite warning
+            importDataButton.textContent = "Overwrite Data";
+            importDataButton.classList.add('warning');
+            importDataButton.classList.remove('secondary');
+            importControlDiv.title = "Warning: Importing will merge/overwrite existing data. Use 'Delete All' first for a clean start.";
+        } else {
+            // No data: Allow clean import
+            importDataButton.textContent = "Select File";
+            importDataButton.classList.remove('warning');
+            importDataButton.classList.add('secondary');
+            importControlDiv.title = "Ready for a clean data import.";
+        }
+        feather.replace();
+    }
+    
+    // --- 3. EVENT LISTENERS ---
+
+    // A. GENERAL TOGGLES - Made Functional
+    toggles.forEach(toggle => {
+        // Set initial state based on mock global variable
+        if (toggle.id === 'toggle-smart-notify') {
+             toggle.checked = IS_SMART_NOTIFICATIONS_MOCK;
+        }
+        
+        toggle.addEventListener('change', (e) => {
+             const label = toggle.previousElementSibling.textContent;
+             const settingId = e.target.id;
+             const isChecked = e.target.checked;
+             
+             // Mock State Control & Integration
+             if (settingId === 'toggle-dark-mode') {
+                 IS_DARK_MODE_MOCK = isChecked;
+             } else if (settingId === 'toggle-focus') {
+                 IS_FOCUS_MODE_MOCK = isChecked;
+             } else if (settingId === 'toggle-smart-notify') {
+                 // CRITICAL: Update global state for Dashboard integration
+                 IS_SMART_NOTIFICATIONS_MOCK = isChecked;
+                 showFlashMessage(`Smart Notifications are now ${isChecked ? 'Enabled' : 'Disabled'}.`, 'bell');
+                 
+                 // Note: To see the effect on the Dashboard, the user must navigate to it.
+             }
+             
+             // Feedback
+             showFlashMessage(`Setting: "${label}" toggled to: ${isChecked ? 'ON' : 'OFF'}`, 'settings');
+        });
+    });
+
+    // B. PROFILE ACTIONS
+    if (saveProfileButton) {
+        saveProfileButton.addEventListener('click', () => {
+             const newName = document.getElementById('profile-name-input').value;
+             showFlashMessage(`Profile updated! Welcome back, ${newName}.`, 'user');
+        });
+    }
+
+    // C. DATA ACTIONS (Import/Export/Delete)
+    
+    // Link button to hidden file input
+    if (importDataButton) {
+        importDataButton.addEventListener('click', () => {
+            importFileInput.click();
+        });
+    }
+
+    // Handle file selection and mock logic
+    if (importFileInput) {
+        importFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (HAS_MOCK_DATA) {
+                // Scenario 1: Data exists -> Simulate Advanced Overwrite/Merge
+                showFlashMessage(`Initiating Advanced Import (${file.name}): Checking for duplicates and merging new records...`, 'alert-circle');
+                setTimeout(() => {
+                    HAS_MOCK_DATA = true; // Still have data
+                    updateImportState();
+                    showFlashMessage(`Import Complete: 12 new records imported, 3 duplicates overwritten.`, 'check-circle');
+                }, 1500);
+
+            } else {
+                // Scenario 2: No data -> Clean Import
+                 showFlashMessage(`Clean Import (${file.name}) initiated. Loading data...`, 'upload');
+                 setTimeout(() => {
+                    HAS_MOCK_DATA = true; // Now has data
+                    updateImportState();
+                    showFlashMessage(`Clean Import Successful! 35 total records loaded.`, 'check-circle');
+                 }, 1500);
+            }
+            e.target.value = null; 
+        });
+    }
+
+
+    if (exportDataButton) {
+        exportDataButton.addEventListener('click', () => {
+             showFlashMessage("Export successful! Your LifeMirror data has been saved to your downloads.", 'download');
+        });
+    }
+
+    // Delete Flow
+    if (deleteDataButton) {
+        deleteDataButton.addEventListener('click', () => {
+             if (deleteConfirmModal) deleteConfirmModal.style.display = 'flex';
+        });
+    }
+    
+    if (deleteDataCancelButton) {
+         deleteDataCancelButton.addEventListener('click', () => {
+              if (deleteConfirmModal) deleteConfirmModal.style.display = 'none';
+         });
+    }
+    
+    if (deleteDataConfirmButton) {
+         deleteDataConfirmButton.addEventListener('click', () => {
+              if (deleteConfirmModal) deleteConfirmModal.style.display = 'none';
+              // CRITICAL: Perform the mock data wipe
+              HAS_MOCK_DATA = false;
+              updateImportState();
+              showFlashMessage("Data permanently destroyed. System is clean for new import.", 'trash-2');
+              // In a real app: clear local storage, reload page content to show empty states.
+         });
+    }
+
+
+    // D. AI PROCESSOR INJECTION
+    const placeholderCard = document.getElementById('ai-processor-container');
+    
+    if (placeholderCard) {
+        placeholderCard.innerHTML = `
+            <div style="text-align: left; margin-top: 10px;">
+                <label for="ai-input" style="font: var(--font-caption); font-weight: 600; color: var(--c-text-dark);">Chat your Day (Simulated AI)</label>
+                <input type="text" id="ai-input" placeholder="e.g., I only slept 5 hours and feel stressed about the deadline." 
+                       style="width: 100%; padding: 10px; border-radius: 8px; border: var(--c-border); background: var(--c-bg-card); margin-top: 5px; box-sizing: border-box; font: var(--font-body);">
+                <button id="ai-process-button" class="modal-button" style="width: 100%; margin-top: 10px;">Process & Automate</button>
+            </div>
+            <div id="ai-output" style="text-align: left; padding: 15px; background: #e6f9f7; border-radius: 8px; margin-top: 15px; border-left: 3px solid var(--c-primary); min-height: 50px;">
+                <p style="margin: 0; color: var(--c-text-muted);">AI Actions will appear here...</p>
+            </div>
+        `;
+
+        document.getElementById('ai-process-button').addEventListener('click', () => {
+            const input = document.getElementById('ai-input').value;
+            const outputDiv = document.getElementById('ai-output');
+            
+            if (!input.trim()) {
+                outputDiv.innerHTML = `<p style="margin: 0; color: var(--c-accent-red);">Please enter text to simulate processing.</p>`;
+                return;
+            }
+
+            const results = simulateAIProcessing(input);
+            outputDiv.innerHTML = `<h4 style="margin: 0 0 8px 0; font-weight: 700; color: var(--c-primary);">AI Actions:</h4><ul style="margin: 0; padding-left: 20px; list-style-type: none;">
+                ${results.map(res => `<li style="font: var(--font-caption); margin-bottom: 4px;">• ${res}</li>`).join('')}
+            </ul>`;
+            
+            showFlashMessage("AI Processing Complete: Data updated across system.", 'cpu');
+        });
+    }
+
+    // --- 5. INITIAL RENDER ---
+    updateImportState();
+    feather.replace();
 }
 
 
@@ -2089,8 +2458,33 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Feather icons failed to load or replace:", e);
     }
 
+    // --- 4. Global Notification Panel Listener (NEW) ---
+    
+    // Target the specific wrapper div that contains the bell icon.
+    // This is more robust than querying the icon element itself.
+    const bellWrapper = document.querySelector('.global-controls .control-icon-wrapper');
+    
+    if (bellWrapper) {
+        bellWrapper.addEventListener('click', (event) => {
+             // NEW CONSOLE LOG FOR DEBUGGING
+             console.log("NOTIFICATION ICON CLICKED. JS FUNCTION FIRED."); 
+             
+             event.stopPropagation(); // Prevents document click from immediately closing
+             toggleNotificationPanel();
+        });
+    }
+    
+    // Hide panel if user clicks anywhere else on the page
+    document.addEventListener('click', () => {
+        const panel = document.getElementById('global-notification-panel');
+        // Only attempt to close if the panel is logically open
+        if (panel && IS_NOTIFICATION_PANEL_OPEN && panel.classList.contains('active')) {
+             // Pass control to the function to handle state update and CSS removal
+             toggleNotificationPanel();
+        }
+    });
 
-    // --- 4. Page-Specific Logic Router ---
+    // --- 5. Page-Specific Logic Router ---
     switch (currentPage) {
         case 'index.html':
             initializeDashboardPage();
