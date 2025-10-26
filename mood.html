@@ -11,6 +11,33 @@
 </head>
 <body>
 
+    <div class="modal-overlay" id="add-mood-modal" style="display: none;">
+        <div class="modal-dialog" style="max-width: 450px;">
+            <h3>Log Your Mood Entry</h3>
+            <div class="modal-form-group" style="text-align: center;">
+                <label for="mood-select">How do you feel right now?</label>
+                <div id="mood-selector" style="display: flex; justify-content: space-around; font-size: 32px; margin-top: 10px;">
+                    <span data-mood="awful" title="Awful" style="cursor: pointer;">😞</span>
+                    <span data-mood="sad" title="Sad" style="cursor: pointer;">🙁</span>
+                    <span data-mood="neutral" title="Neutral" style="cursor: pointer;">😐</span>
+                    <span data-mood="happy" title="Happy" style="cursor: pointer;">🙂</span>
+                    <span data-mood="great" title="Great" style="cursor: pointer;">😄</span>
+                </div>
+                <input type="hidden" id="current-mood-value">
+            </div>
+             <p id="selected-mood-label" style="text-align: center; font-weight: 600; color: var(--c-primary); margin-top: 15px;">Neutral</p>
+             
+            <div class="modal-form-group">
+                <label for="mood-notes-input">Quick Note (Optional)</label>
+                <input type="text" id="mood-notes-input" placeholder="e.g., Stressed about project deadline.">
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-button secondary" id="mood-modal-cancel-button">Cancel</button>
+                <button class="modal-button" id="mood-modal-add-button">Log Entry</button>
+            </div>
+        </div>
+    </div>
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
         <ul class="sidebar-menu" id="sidebar-menu">
@@ -36,7 +63,7 @@
                 <h2>Mood & Stress</h2>
                 <p>Your mental wellbeing and stress tracker.</p>
             </div>
-             <button class="add-new-button">
+             <button class="add-new-button" id="add-mood-entry-button">
                  <i data-feather="plus"></i> Add Mood Entry
              </button>
         </section>
@@ -45,37 +72,37 @@
 
             <div class="card kpi-card" style="grid-column: span 1;">
                 <p class="kpi-label">Stress Index</p>
-                <p class="kpi-value" style="color: var(--c-accent-yellow);">45%</p>
-                <p class="kpi-label">Moderate</p>
+                <p class="kpi-value" id="stress-index-value" style="color: var(--c-accent-yellow);">45%</p>
+                <p class="kpi-label" id="stress-index-label">Moderate</p>
             </div>
             
             <div class="card" style="grid-column: span 2;">
                 <h3>Mood Trend</h3>
                  <div class="chart-placeholder-large">
                     <p>Emoji-based line graph showing mood over time</p>
-                    
                 </div>
             </div>
 
             <div class="card" style="grid-column: span 3;">
                 <h3>Suggested Remedies</h3>
-                <ul class="suggestion-list">
-                    <li class="suggestion-item">
+                <ul class="suggestion-list" id="remedy-list">
+                    <li class="suggestion-item" data-status="pending" data-remedy="meditate">
                         <i data-feather="coffee"></i>
-                        <p>Meditate 5 mins.</p>
-                        <button class="remedy-button" style="margin-left: auto;">Start</button> </li>
-                    <li class="suggestion-item">
+                        <p>Meditate 5 mins. (Suggested due to **High Stress**)</p>
+                        <button class="remedy-button" data-action="start" style="margin-left: auto;">Start</button> </li>
+                    <li class="suggestion-item" data-status="pending" data-remedy="break">
                         <i data-feather="wind"></i>
-                        <p>Take a break.</p>
-                        <button class="remedy-button" style="margin-left: auto;">Log Break</button> </li>
-                     <li class="suggestion-item">
+                        <p>Take a break. (Suggested due to **Task Overload**)</p>
+                        <button class="remedy-button" data-action="log" style="margin-left: auto;">Log Break</button> </li>
+                     <li class="suggestion-item" data-status="pending" data-remedy="read">
                         <i data-feather="book-open"></i>
-                        <p>Try reading for 15 minutes.</p>
-                         <button class="remedy-button" style="margin-left: auto;">Log Reading</button> </li>
+                        <p>Try reading for 15 minutes. (Suggested due to **Screen Time**)</p>
+                         <button class="remedy-button" data-action="log" style="margin-left: auto;">Log Reading</button> </li>
                 </ul>
             </div>
 
-        </section> </main> <script>
+        </section>
+    </main> <script>
       feather.replace()
     </script>
     <script src="script.js"></script>

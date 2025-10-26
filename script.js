@@ -268,9 +268,6 @@ function initializeTasksPageLogic() {
                             className: task.priority 
                         }));
                     successCallback(calendarEvents);
-                },
-                dateClick: function(info) {
-                    showDayTasks(info.dateStr); 
                 }
             });
             
@@ -278,6 +275,390 @@ function initializeTasksPageLogic() {
             calendar.refetchEvents();
         }
     } 
+}
+
+/**
+ * Runs all logic for the Mood Page (mood.html)
+ */
+function initializeMoodPage() {
+    
+    // --- 1. STATE MANAGEMENT ---
+    const TODAY_DATE = getTodayDateString();
+    const COOLDOWN_DURATION = 3600000; // 1 hour in milliseconds
+    
+    let moodHistory = [
+        // Mock data structure: value is 0 (worst) to 4 (best)
+        { date: '2025-10-23', mood: 3, note: 'Had a productive morning.', stress: 30, isFinal: true },
+        { date: '2025-10-24', mood: 2, note: 'Normal work day.', stress: 45, isFinal: true },
+        { date: '2025-10-25', mood: 1, note: 'Stressed about project deadline.', stress: 70, isFinal: true },
+        // Today's entry (will be overwritten by user log or updated by remedies)
+        { date: TODAY_DATE, mood: 2, note: 'Daily check-in placeholder.', stress: 45, isFinal: false }, 
+    ];
+    
+    // NEW STATE: Daily log counter and last used timestamps
+    let remedyLog = {
+        date: TODAY_DATE,
+        breakCount: 0,
+        readCount: 0,
+        lastBreakTime: 0, // NEW: Timestamp of last break
+        lastReadTime: 0   // NEW: Timestamp of last read
+    };
+
+    // Mood values mapped to labels and score impact
+    const moodMap = {
+        'awful': { label: 'Awful', value: 0, color: 'var(--c-accent-red)' },
+        'sad': { label: 'Sad', value: 1, color: 'var(--c-accent-yellow)' },
+        'neutral': { label: 'Neutral', value: 2, color: 'var(--c-accent-yellow)' },
+        'happy': { label: 'Happy', value: 3, color: 'var(--c-primary)' },
+        'great': { label: 'Great', value: 4, color: 'var(--c-primary)' }
+    };
+
+    const stressIndexValue = document.getElementById('stress-index-value');
+    const stressIndexLabel = document.getElementById('stress-index-label');
+    const remedyList = document.getElementById('remedy-list');
+
+    const addMoodModal = document.getElementById('add-mood-modal');
+    const addMoodEntryButton = document.getElementById('add-mood-entry-button');
+    const moodModalCancelButton = document.getElementById('mood-modal-cancel-button');
+    const moodModalAddButton = document.getElementById('mood-modal-add-button');
+    const moodSelector = document.getElementById('mood-selector');
+    const currentMoodValueInput = document.getElementById('current-mood-value');
+    const selectedMoodLabel = document.getElementById('selected-mood-label');
+    const moodNotesInput = document.getElementById('mood-notes-input');
+    
+    const LOG_TIME_HOUR = 20; // 8 PM
+    const LOG_TIME_MINUTE = 30; // 8:30 PM
+    let activeTimer = null; // To hold the interval/timeout ID for the running timer
+
+    // --- NEW: Timer Logic ---
+    function startTimer(button, durationMinutes, initialText) {
+        if (activeTimer) {
+             alert("A focus timer is already running!");
+             return;
+        }
+        
+        const durationMs = durationMinutes * 60 * 1000;
+        let endTime = Date.now() + durationMs;
+        let timerInterval;
+
+        button.disabled = true;
+        button.textContent = '05:00';
+        button.style.backgroundColor = '#ccc'; // Grey out
+
+        const updateTimer = () => {
+            const timeRemaining = endTime - Date.now();
+            const totalSeconds = Math.max(0, Math.floor(timeRemaining / 1000));
+            
+            const seconds = totalSeconds % 60;
+            const minutes = Math.max(0, Math.floor(totalSeconds / 60));
+            
+            const displayTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            button.textContent = displayTime;
+
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                activeTimer = null; // Clear the active timer
+                markRemedyComplete(button, initialText, 'timer');
+            }
+        };
+
+        timerInterval = setInterval(updateTimer, 1000);
+        activeTimer = timerInterval; // Store the interval ID
+        updateTimer(); // Initial call
+    }
+    
+    // NEW: Function to mark remedy complete
+    function markRemedyComplete(button, originalText, type) {
+         const item = button.closest('.suggestion-item');
+         const remedyType = item.dataset.remedy;
+         
+         // 1. Update State (Counter & Cooldown Timestamp)
+         if (type === 'log' || type === 'timer') {
+             if (remedyType === 'break') {
+                 remedyLog.breakCount++;
+                 remedyLog.lastBreakTime = Date.now();
+             } else if (remedyType === 'read') {
+                 remedyLog.readCount++;
+                 remedyLog.lastReadTime = Date.now();
+             }
+             remedyLog.date = getTodayDateString();
+         }
+
+         // 2. Update UI
+         item.classList.add('completed');
+         button.textContent = (type === 'log') ? `Logged (${(remedyType === 'break' ? remedyLog.breakCount : remedyLog.readCount)})` : 'Completed';
+         button.style.backgroundColor = 'var(--c-primary)';
+         button.disabled = true;
+         
+         // 3. Simulate stress reduction
+         const lastEntry = moodHistory[moodHistory.length - 1];
+         if (lastEntry.stress > 10) {
+              lastEntry.stress = Math.max(10, lastEntry.stress - 15); // Reduce stress
+              renderMoodPage();
+         }
+    }
+
+
+    // --- 2. CORE RENDER FUNCTION ---
+    function renderMoodPage() {
+        
+        const now = new Date();
+        const hasLoggedToday = moodHistory.some(entry => entry.date === getTodayDateString() && entry.isFinal);
+        const isPastLogTime = now.getHours() > LOG_TIME_HOUR || 
+                             (now.getHours() === LOG_TIME_HOUR && now.getMinutes() >= LOG_TIME_MINUTE);
+
+        // --- A. Handle Daily Reset of Counters (Ruggedness) ---
+        if (remedyLog.date !== getTodayDateString()) {
+             remedyLog = { date: getTodayDateString(), breakCount: 0, readCount: 0, lastBreakTime: 0, lastReadTime: 0 };
+        }
+        
+        // --- B. Calculate & Display Stress Index ---
+        const lastEntry = moodHistory[moodHistory.length - 1];
+        let stressScore = lastEntry.stress;
+
+        let stressLevel = 'Low';
+        let color = 'var(--c-primary)';
+        
+        if (stressScore > 75) {
+            stressLevel = 'High';
+            color = 'var(--c-accent-red)';
+        } else if (stressScore > 40) {
+            stressLevel = 'Moderate';
+            color = 'var(--c-accent-yellow)';
+        }
+        
+        if (stressIndexValue) {
+            stressIndexValue.textContent = `${stressScore}%`;
+            stressIndexValue.style.color = color;
+        }
+        if (stressIndexLabel) {
+            stressIndexLabel.textContent = stressLevel;
+        }
+        
+        // --- C. Enforcement of Daily Logging Rule ---
+        if (addMoodEntryButton) {
+            if (hasLoggedToday) {
+                addMoodEntryButton.textContent = 'Logged for Today';
+                addMoodEntryButton.disabled = true;
+                addMoodEntryButton.style.backgroundColor = 'var(--c-text-muted)';
+            } else if (!isPastLogTime) {
+                addMoodEntryButton.textContent = `Log after ${LOG_TIME_HOUR}:${LOG_TIME_MINUTE}`;
+                addMoodEntryButton.disabled = true;
+                addMoodEntryButton.style.backgroundColor = 'var(--c-text-muted)';
+            } else {
+                addMoodEntryButton.textContent = 'Add Mood Entry';
+                addMoodEntryButton.disabled = false;
+                addMoodEntryButton.style.backgroundColor = 'var(--c-primary)';
+            }
+        }
+        
+        // --- D. Update Remedies List (Actionable items) ---
+        if(remedyList) {
+             remedyList.querySelectorAll('.remedy-button').forEach(button => {
+                 // Clone and replace to safely remove old listeners
+                 button.replaceWith(button.cloneNode(true));
+             });
+             
+             remedyList.querySelectorAll('.suggestion-item').forEach(item => {
+                 const button = item.querySelector('.remedy-button');
+                 const remedyType = item.dataset.remedy;
+                 const originalText = button.textContent;
+                 
+                 // Clean up the display text
+                 const pTag = item.querySelector('p');
+                 if(pTag) {
+                     pTag.innerHTML = pTag.innerHTML.replace(/\*\*/g, ''); // Remove ** from text
+                 }
+                 
+                 if (!button || item.classList.contains('completed')) return;
+
+                 const duration = (remedyType === 'meditate') ? 5 : (remedyType === 'read' ? 15 : 0);
+                 
+                 // Cooldown Logic Check
+                 let cooldownTime = (remedyType === 'break') ? remedyLog.lastBreakTime : remedyLog.lastReadTime;
+                 const timeElapsed = Date.now() - cooldownTime;
+                 const isOnCooldown = (cooldownTime > 0) && (timeElapsed < COOLDOWN_DURATION);
+
+                 // Update button text with current log count/cooldown status
+                 if (isOnCooldown) {
+                    const remainingMs = COOLDOWN_DURATION - timeElapsed;
+                    const remainingMinutes = Math.ceil(remainingMs / 60000); 
+                    button.textContent = `Ready in ${remainingMinutes} min`;
+                    button.disabled = true;
+                    button.style.backgroundColor = '#ccc';
+                 } else {
+                    // Not on cooldown - show the standard count/action
+                    button.disabled = false;
+                    button.style.backgroundColor = 'var(--c-primary)';
+
+                    if (remedyType === 'break') {
+                         button.textContent = `Log Break (${remedyLog.breakCount})`;
+                    } else if (remedyType === 'read') {
+                         button.textContent = `Log Reading (${remedyLog.readCount})`;
+                    } else if (remedyType === 'meditate') {
+                         button.textContent = 'Start';
+                    }
+                 }
+                 
+                 // Re-attach the listeners
+                 button.addEventListener('click', (e) => {
+                     // Check for running timer (only essential for starting a new timer)
+                     if (activeTimer && duration > 0) {
+                         alert("A focus timer is already running!");
+                         return;
+                     }
+                     
+                     if (duration > 0) { // Timer actions (Meditate, Read)
+                         startTimer(e.currentTarget, duration, originalText);
+                     } else { // Instant actions (Log Break)
+                         markRemedyComplete(e.currentTarget, originalText, 'log');
+                     }
+                 });
+             });
+        }
+        
+        feather.replace();
+    }
+
+    // --- 3. MOOD LOGGING MODAL LOGIC (Unchanged) ---
+    function showMoodModal() {
+        if (addMoodEntryButton.disabled) return;
+
+        if (addMoodModal) addMoodModal.style.display = 'flex';
+        resetMoodModal();
+    }
+
+    function hideMoodModal() {
+        if (addMoodModal) addMoodModal.style.display = 'none';
+    }
+
+    function resetMoodModal() {
+        const TODAY_DATE = getTodayDateString();
+        // Set default values
+        currentMoodValueInput.value = 'neutral';
+        selectedMoodLabel.textContent = 'Neutral';
+        selectedMoodLabel.style.color = moodMap['neutral'].color;
+        moodNotesInput.value = '';
+
+        // Clear all highlight classes
+        moodSelector.querySelectorAll('span').forEach(span => {
+            span.style.transform = 'scale(1)';
+            span.style.opacity = '0.5';
+        });
+        // Highlight default
+        const neutralSpan = moodSelector.querySelector('span[data-mood="neutral"]');
+        if(neutralSpan) {
+            neutralSpan.style.opacity = '1';
+            neutralSpan.style.transform = 'scale(1.2)';
+        }
+    }
+
+    // Mood Selector Click Handler
+    if (moodSelector) {
+        moodSelector.querySelectorAll('span').forEach(span => {
+            span.addEventListener('click', (e) => {
+                const moodKey = e.currentTarget.dataset.mood;
+                const moodData = moodMap[moodKey];
+
+                // Update visual selection
+                moodSelector.querySelectorAll('span').forEach(s => {
+                    s.style.opacity = '0.5';
+                    s.style.transform = 'scale(1)';
+                });
+                e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.transform = 'scale(1.2)';
+
+                // Update input values
+                currentMoodValueInput.value = moodKey;
+                selectedMoodLabel.textContent = moodData.label;
+                selectedMoodLabel.style.color = moodData.color;
+            });
+        });
+    }
+
+    // Final Log Entry Action
+    if (moodModalAddButton) {
+        moodModalAddButton.addEventListener('click', () => {
+            const moodKey = currentMoodValueInput.value;
+            const moodData = moodMap[moodKey];
+            const note = moodNotesInput.value.trim();
+            
+            // Duplication Check
+            if (moodHistory.some(entry => entry.date === getTodayDateString() && entry.isFinal)) {
+                alert("Mood already logged for today.");
+                hideMoodModal();
+                return;
+            }
+
+            // Simple logic to calculate new stress
+            let lastStress = moodHistory[moodHistory.length - 1].stress;
+            let newStress = moodData.value < 2 ? 
+                Math.min(95, lastStress + 10) : // Increase if mood is poor
+                Math.max(10, lastStress - 5);  // Decrease if mood is good
+
+            const newEntry = {
+                date: getTodayDateString(),
+                mood: moodData.value,
+                note: note,
+                stress: newStress,
+                isFinal: true // Mark this entry as the final one for the day
+            };
+            
+            // Update the mood history
+            if (moodHistory[moodHistory.length - 1].date === getTodayDateString() && !moodHistory[moodHistory.length - 1].isFinal) {
+                 moodHistory[moodHistory.length - 1] = newEntry;
+            } else {
+                 moodHistory.push(newEntry);
+            }
+            
+            alert(`Mood Logged! Mood: ${moodData.label}. Stress updated to ${newStress}%.`);
+            
+            renderMoodPage(); // Re-render to update the Stress Index KPI and lock the button
+            hideMoodModal();
+        });
+    }
+
+    // Button Listeners
+    if (addMoodEntryButton) addMoodEntryButton.addEventListener('click', showMoodModal);
+    if (moodModalCancelButton) moodModalCancelButton.addEventListener('click', hideMoodModal);
+    if (addMoodModal) addMoodModal.addEventListener('click', (e) => {
+        if (e.target === addMoodModal) hideMoodModal();
+    });
+
+    // --- 4. INITIAL RENDER & Timer Check ---
+    renderMoodPage();
+    
+    function checkTimeAndRender() {
+        if (activeTimer) return; // Don't interfere if a remedy timer is running
+        
+        const now = new Date();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+
+        // 1. Check if button should be unlocked/locked
+        if (!moodHistory.some(entry => entry.date === getTodayDateString() && entry.isFinal)) {
+            if (hour > LOG_TIME_HOUR || (hour === LOG_TIME_HOUR && minute >= LOG_TIME_MINUTE) || hour < 1) {
+                renderMoodPage(); // Render to update button state (unlock/re-enable)
+            }
+        }
+        // 2. Check if a cooldown period ended and needs a re-render
+        if (remedyLog.lastBreakTime > 0 || remedyLog.lastReadTime > 0) {
+             const breakElapsed = Date.now() - remedyLog.lastBreakTime;
+             const readElapsed = Date.now() - remedyLog.lastReadTime;
+             
+             if (breakElapsed >= COOLDOWN_DURATION || readElapsed >= COOLDOWN_DURATION) {
+                 renderMoodPage();
+             }
+        }
+        
+        // 3. Reset daily status check at midnight
+        if (hour < 1) { 
+             renderMoodPage(); // Re-render at midnight to reset daily status
+        }
+    }
+    
+    // Start the timer to check and enforce the 8:30 PM logic and cooldown status
+    setInterval(checkTimeAndRender, 60000); // Check every minute (60,000 ms)
 }
 
 /**
@@ -489,7 +870,7 @@ function initializeFinancePage() {
             existingSummary.remove();
         }
         
-        // Add dynamic header summary (replacing placeholder text)
+        // Add dynamic header summary 
         const summaryDiv = document.createElement('div');
         summaryDiv.className = 'summary-status';
         if (overdueCount > 0) {
@@ -786,6 +1167,8 @@ function initializeFinancePage() {
     // --- 5. INITIAL RENDER ---
     renderBills();
 }
+
+
 
 /**
  * Runs all logic for the Insights Page (insights.html)
