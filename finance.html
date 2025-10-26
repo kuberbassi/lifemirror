@@ -15,7 +15,67 @@
 </head>
 
 <body>
+    
+    <div class="modal-overlay" id="add-bill-modal" style="display: none;">
+        <div class="modal-dialog" data-mode="add" id="bill-modal-dialog">
+            <h3 id="bill-modal-title">Add New Bill or Subscription</h3>
+            
+            <input type="hidden" id="bill-id-input">
 
+            <div class="modal-form-group">
+                <label for="bill-name-input">Bill Name (e.g., Spotify)</label>
+                <input type="text" id="bill-name-input" placeholder="e.g., Netflix Subscription">
+            </div>
+
+            <div class="modal-form-row">
+                <div class="modal-form-group">
+                    <label for="bill-amount-input">Amount (₹)</label>
+                    <input type="number" id="bill-amount-input" value="500" min="10">
+                </div>
+                <div class="modal-form-group">
+                    <label for="bill-due-date-input">Next Due Date</label>
+                    <input type="date" id="bill-due-date-input">
+                </div>
+            </div>
+            
+            <div class="modal-form-row">
+                <div class="modal-form-group">
+                    <label for="bill-frequency-select">Repayment Frequency</label>
+                    <select id="bill-frequency-select">
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="annually">Annually</option>
+                        <option value="one-time">One-Time</option>
+                    </select>
+                </div>
+                <div class="modal-form-group">
+                    <label for="bill-link-input">Payment Link (Optional)</label>
+                    <input type="url" id="bill-link-input" placeholder="e.g., https://netflix.com/payment">
+                </div>
+            </div>
+
+
+            <div class="modal-actions">
+                <button class="modal-button delete" id="bill-modal-delete-button" style="display: none;">
+                    Delete Bill
+                </button>
+                <div style="margin-left: auto; display: flex; gap: 12px;">
+                    <button class="modal-button secondary" id="bill-modal-cancel-button">Cancel</button>
+                    <button class="modal-button" id="bill-modal-action-button">Add Bill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="delete-confirm-modal" style="display: none;">
+        <div class="modal-dialog" style="max-width: 400px; text-align: center;">
+            <h3 style="color: var(--c-accent-red); margin-bottom: 8px;"><i data-feather="alert-triangle" style="width: 24px; height: 24px;"></i> Confirm Deletion</h3>
+            <p id="delete-confirm-message" style="margin-bottom: 24px; color: var(--c-text-dark);">Are you sure you want to delete this bill? This action cannot be undone.</p>
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 0;">
+                <button class="modal-button secondary" id="delete-cancel-button">Cancel</button>
+                <button class="modal-button delete" id="delete-confirm-button">Delete Permanently</button>
+            </div>
+        </div>
+    </div>
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
         <ul class="sidebar-menu" id="sidebar-menu">
@@ -46,7 +106,7 @@
                 <h2>Finance & Bills</h2>
                 <p>Your subscriptions, bills, and payments tracker.</p>
             </div>
-            <button class="add-new-button">
+            <button class="add-new-button" id="add-bill-button">
                 <i data-feather="plus"></i> Add New Bill/Sub
             </button>
         </section>
@@ -55,48 +115,35 @@
 
             <div class="card kpi-card">
                 <p class="kpi-label">Total Due This Week</p>
-                <p class="kpi-value">₹4,500</p>
+                <p class="kpi-value" id="kpi-due">₹4,500</p>
             </div>
             <div class="card kpi-card">
-                <p class="kpi-label">Active Subscriptions</p>
-                <p class="kpi-value">₹1,200 / mo</p>
+                <p class="kpi-label">Active Subscriptions (Monthly)</p>
+                <p class="kpi-value" id="kpi-subs">₹1,200 / mo</p>
             </div>
             <div class="card kpi-card">
                 <p class="kpi-label">Financial Health</p>
-                <p class="kpi-value" style="color: var(--c-primary);">90%</p>
+                <p class="kpi-value" id="kpi-health" style="color: var(--c-primary);">90%</p>
             </div>
 
             <div class="card" style="grid-column: span 3;">
-                <h3>Upcoming & Overdue Bills</h3>
-                <ul class="bill-list">
-                    <li class="bill-item overdue">
-                        <span class="icon">📺</span>
-                        <div class="details">
-                            <p>Netflix Subscription</p>
-                            <span>Streaming Service</span>
-                        </div>
-                        <span class="due-date">Due Today</span>
-                        <button class="pay-button">Pay Now</button>
-                    </li>
-                    <li class="bill-item">
-                        <span class="icon">💡</span>
-                        <div class="details">
-                            <p>Electricity Bill</p>
-                            <span>Utilities</span>
-                        </div>
-                        <span class="due-date">Due in 3 days</span>
-                        <button class="pay-button">Pay Now</button>
-                    </li>
-                    <li class="bill-item">
-                        <span class="icon">📱</span>
-                        <div class="details">
-                            <p>Mobile Phone Plan</p>
-                            <span>Telecommunication</span>
-                        </div>
-                        <span class="due-date">Due in 7 days</span>
-                        <button class="pay-button">Pay Now</button>
-                    </li>
-                </ul>
+                <div class="card-header">
+                    <h3>Upcoming & Overdue Bills</h3>
+                    <div class="filter-bar" id="bill-filter-bar">
+                        <span class="filter-item active" data-filter="upcoming">Upcoming</span>
+                        <span class="filter-item" data-filter="all">All</span>
+                        <span class="filter-item" data-filter="subscriptions">Subscriptions</span>
+                        <span class="filter-item" data-filter="paid">Paid</span>
+                    </div>
+                </div>
+                
+                <ul class="bill-list" id="main-bill-list">
+                    </ul>
+
+                <button class="add-new-button secondary" id="show-more-bills-button" style="margin-top: 20px; align-self: center; display: none;">
+                    <span id="show-more-text">Show All Bills (5 more)</span>
+                    <i data-feather="chevron-down"></i>
+                </button>
             </div>
 
         </section>

@@ -25,7 +25,7 @@
 
     <main class="main-content">
         <header class="top-bar">
-            <div class="date-time"><span id="current-time">00:55</span><span>Sunday, 26 October 2025</span></div>
+            <div class="date-time"><span id="current-time">12:46</span><span>Sunday, 26 October 2025</span></div>
             <div class="global-controls"><div class="control-icon-wrapper"><i data-feather="bell"></i></div><img src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic"></div>
         </header>
 
@@ -34,7 +34,7 @@
             <p>Your weekly trends and full AI recommendation feed.</p>
         </section>
 
-        <section class="page-grid insights-grid"> {/* Added insights-grid class */}
+        <section class="insights-grid">
 
             <div class="card kpi-card">
                 <p class="kpi-label">Life Score (Avg)</p>
@@ -42,39 +42,36 @@
             </div>
             <div class="card kpi-card">
                 <p class="kpi-label">Productivity Trend</p>
-                <p class="kpi-value" style="color: var(--c-primary);">↑ 15%</p> {/* Green for increase */}
+                <p class="kpi-value" style="color: var(--c-primary);">↑ 15%</p>
             </div>
              <div class="card kpi-card">
                 <p class="kpi-label">Wellbeing Trend</p>
                 <p class="kpi-value">Stable</p>
             </div>
-            
             <div class="card kpi-card">
                  <p class="kpi-label">Achievements</p>
                  <div class="badge-placeholder">
                      <i data-feather="award" style="color: gold;"></i>
                      <i data-feather="award" style="color: silver;"></i>
-                     <i data-feather="award" style="color: #cd7f32;"></i> {/* Bronze */}
+                     <i data-feather="award" style="color: #cd7f32;"></i>
                      <span>+2 more</span>
                  </div>
             </div>
 
-            <div class="card" style="grid-column: span 2;"> {/* Spans 2 columns */}
+            <div class="card" style="grid-column: span 2;">
                 <h3>Weekly Summary Charts</h3>
-                <div class="chart-placeholder-large chart-visual"> {/* Added chart-visual class */}
+                <div class="chart-placeholder-large chart-visual">
                     <p>Weekly Trends</p>
                     <div class="chart-bars"><div></div><div></div><div></div><div></div><div></div></div>
                 </div>
             </div>
 
-            <div class="card" style="grid-column: span 2;"> {/* Spans 2 columns */}
+            <div class="card" style="grid-column: span 2;">
                 <h3>AI Recommendation Feed</h3>
                 <ul class="remedy-list">
-                    {/* ... (remedy items unchanged) ... */}
                     <li class="remedy-item" data-status="finance"><i data-feather="alert-triangle"></i><p>Overdue: Netflix Bill. Pay Now.</p><button class="remedy-button">Pay</button></li>
-                    <li class="remedy-item" data-status="health"><i data-feather="moon"></i><p>Low Sleep trend. Adjust bedtime.</p><button class="remedy-button">Plan</button></li>
-                    <li class="remedy-item" data-status="task"><i data-feather="alert-circle"></i><p>Project Report is frequently late.</p><button class="remedy-button">Review</button></li>
-                    <li class="remedy-item" data-status="health"><i data-feather="coffee"></i><p>High stress pattern detected.</p><button class="remedy-button">Meditate</button></li>
+                     <li class="remedy-item" data-status="health"><i data-feather="moon"></i><p>Low Sleep trend. Adjust bedtime.</p><button class="remedy-button">Plan</button></li>
+                     <li class="remedy-item" data-status="task"><i data-feather="alert-circle"></i><p>Project Report is frequently late.</p><button class="remedy-button">Review</button></li>
                 </ul>
             </div>
 

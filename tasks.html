@@ -12,10 +12,49 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
+        
+    <link href='/vendor/fullcalendar/main.min.css' rel='stylesheet' />
 </head>
 
 <body>
-
+    <div class="modal-overlay" id="add-task-modal" style="display: none;">
+        <div class="modal-dialog">
+            <h3>Add New Task</h3>
+            <div class="modal-form-group">
+                <label for="task-text-input">What do you need to do?</label>
+                <input type="text" id="task-text-input" placeholder="e.g., Finalize project report">
+            </div>
+            <div class="modal-form-row">
+                <div class="modal-form-group">
+                    <label for="task-priority-select">Priority</label>
+                    <select id="task-priority-select">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="modal-form-group">
+                    <label for="task-date-input">Date</label>
+                    <input type="date" id="task-date-input">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-button secondary" id="modal-cancel-button">Cancel</button>
+                <button class="modal-button" id="modal-add-button">Add Task</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="day-tasks-modal" style="display: none;">
+        <div class="modal-dialog">
+            <h3 id="day-tasks-title">Tasks for October 26</h3>
+            <ul class="task-list" id="day-tasks-list">
+                </ul>
+            <div class="modal-actions">
+                <button class="modal-button" id="day-tasks-close-button">Close</button>
+            </div>
+        </div>
+    </div>
+    
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
         <ul class="sidebar-menu" id="sidebar-menu">
@@ -40,75 +79,29 @@
                     src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic">
             </div>
         </header>
-
-        <section class="hero-header">
-            <h2>Tasks & Meetings</h2>
-            <p>Your complete schedule from all integrated calendars.</p>
-        </section>
-
+        
         <section class="page-grid">
-
             <div class="card" style="grid-column: span 2;">
                 <div class="card-header">
                     <h3>All Tasks</h3>
-                    <div class="filter-bar">
-                        <span class="filter-item">Today</span>
-                        <span class="filter-item active">Week</span>
-                        <span class="filter-item">Priority</span>
-                    </div>
                     <button class="add-task-button">
                         <i data-feather="plus"></i> Add Task
                     </button>
                 </div>
-
-                <ul class="task-list">
-                    <li class="task-item">
-                        <input type="checkbox" id="task1" checked>
-                        <label for="task1">Finalize project report</label>
-                        <span class="task-tag high">High</span>
-                    </li>
-                    <li class="task-item">
-                        <input type="checkbox" id="task2">
-                        <label for="task2">Call with team</label>
-                        <span class="task-tag medium">Medium</span>
-                    </li>
-                    <li class="task-item">
-                        <input type="checkbox" id="task3">
-                        <label for="task3">Pay electricity bill</label>
-                        <span class="task-tag high">High</span>
-                    </li>
-                    <li class="task-item">
-                        <input type="checkbox" id="task4">
-                        <label for="task4">Submit CSE Assignment</label>
-                        <span class="task-tag medium">Medium</span>
-                    </li>
-                    <li class="task-item">
-                        <input type="checkbox" id="task5">
-                        <label for="task5">Practice guitar</label>
-                        <span class="task-tag low">Low</span>
-                    </li>
-                    <li class="task-item">
-                        <input type="checkbox" id="task6">
-                        <label for="task6">Buy groceries</label>
-                        <span class="task-tag low">Low</span>
-                    </li>
-                </ul>
+                <ul class="task-list" id="main-task-list">
+                    </ul>
             </div>
 
-            <div class="card" style="grid-column: span 1;">
-                <h3>Productivity Heatmap</h3>
-                <div class="heatmap-placeholder chart-visual">
-                    <i data-feather="calendar"></i>
-                    <span>Calendar Heatmap</span>
-                </div>
+            <div class="card" style="grid-column: span 1; padding: 12px;">
+                <div id="calendar"></div>
             </div>
-
         </section>
     </main>
-    <script>
-        feather.replace()
-    </script>
+    
+    <script> feather.replace() </script>
+    
+    <script src='/vendor/fullcalendar/main.min.js'></script>
+    
     <script src="script.js"></script>
 </body>
-
 </html>
