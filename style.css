@@ -1515,3 +1515,50 @@ body {
   margin-bottom: 20px;
   grid-column: span 3;
 }
+/* ADD to the end of your style.css file */
+
+/* --- Vault Card Interaction Styles --- */
+.vault-item {
+    position: relative; /* Needed for context menu positioning */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px; /* Ensure consistent height */
+}
+
+.vault-item .context-menu {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.2s ease;
+}
+
+.vault-item:hover .context-menu {
+    opacity: 1; /* Shows on hover */
+}
+
+.vault-item .context-menu button {
+    background: var(--c-bg-main);
+    border: var(--c-border);
+    border-radius: 6px;
+    padding: 4px;
+    cursor: pointer;
+    line-height: 1;
+    color: var(--c-text-muted);
+}
+
+.vault-item .context-menu button:hover {
+    color: var(--c-primary);
+}
+
+.vault-item.add-new {
+    /* Ensure the add new tile is centered and has no context menu */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}

@@ -16,7 +16,47 @@ const getTodayDateString = () => {
     return `${year}-${month}-${day}`;
 }
 
-function startSleepNotificationCheck(fitnessHistory, showFlashMessage) {
+/**
+ * Shows a custom flash notification in the app.
+ * MOVED TO GLOBAL SCOPE FOR USE ACROSS PAGES (Fitness, Vault).
+ * @param {string} message 
+ * @param {string} iconName 
+ */
+function showFlashMessage(message, iconName = 'check-circle') {
+    const container = document.getElementById('flash-message-container');
+    if (!container) return;
+
+    const flash = document.createElement('div');
+    flash.className = 'flash-message';
+    flash.innerHTML = `<i data-feather="${iconName}"></i> <span>${message}</span>`;
+    container.appendChild(flash);
+    feather.replace();
+
+    // Automatically remove the message after the animation finishes (5 seconds)
+    setTimeout(() => {
+        if (container.contains(flash)) {
+            container.removeChild(flash);
+        }
+    }, 5000);
+}
+
+/**
+ * Mocks the addition of a task to the global state for the Tasks page.
+ * (In a real app, this would use an exported addTask function).
+ * @param {string} text - The task description.
+ * @param {string} duration - The estimated duration from the Vault.
+ */
+function addNewTaskFromVault(text, duration) {
+    // This assumes the user will manually check this task off once done.
+    if (typeof showFlashMessage === 'function') {
+        showFlashMessage(`Task: "${text}" added to your schedule for ${duration} min!`, 'check-square');
+    }
+    // In a production environment, you would call a global addTask function here
+    // that updates the actual taskState array in initializeTasksPageLogic.
+}
+
+
+function startSleepNotificationCheck(fitnessHistory) {
     if (sleepCheckInterval) {
         clearInterval(sleepCheckInterval);
     }
@@ -322,33 +362,10 @@ function initializeTasksPageLogic() {
  */
 function initializeFitnessPage() {
     
-    // --- 1. GLOBAL HELPERS ---
-    /**
-     * Shows a custom flash notification in the app.
-     * @param {string} message 
-     * @param {string} iconName 
-     */
-    function showFlashMessage(message, iconName = 'check-circle') {
-        const container = document.getElementById('flash-message-container');
-        if (!container) return;
-
-        const flash = document.createElement('div');
-        flash.className = 'flash-message';
-        flash.innerHTML = `<i data-feather="${iconName}"></i> <span>${message}</span>`;
-        container.appendChild(flash);
-        feather.replace(); // Ensure the icon renders
-
-        // Automatically remove the message after the animation finishes (5 seconds)
-        setTimeout(() => {
-            if (container.contains(flash)) {
-                container.removeChild(flash);
-            }
-        }, 5000);
-    }
-    
-    // --- 2. STATE MANAGEMENT ---
+    // --- 1. GLOBAL HELPERS (Removed local showFlashMessage) ---
     const TODAY_DATE = getTodayDateString();
     
+    // --- 2. STATE MANAGEMENT ---
     let selectedWaterVolume = 0; // State for the water modal
 
     let fitnessHistory = [
@@ -515,7 +532,7 @@ function initializeFitnessPage() {
         const type = activityTypeSelect.value;
         let unitText = 'steps';
         let placeholder = 'e.g., 5000';
-        let label = 'Count';
+        let label = 'Value';
 
         if (type === 'workout') {
             unitText = 'minutes';
@@ -711,7 +728,7 @@ function initializeFitnessPage() {
     }
 
     // --- 6. SLEEP NOTIFICATION TIMER ---
-    startSleepNotificationCheck(fitnessHistory, showFlashMessage);
+    startSleepNotificationCheck(fitnessHistory);
 
 
     // --- 7. INITIAL RENDER ---
@@ -1100,6 +1117,389 @@ function initializeMoodPage() {
     
     // Start the timer to check and enforce the 8:30 PM logic and cooldown status
     setInterval(checkTimeAndRender, 60000); // Check every minute (60,000 ms)
+}
+
+/**
+ * Runs all logic for the Social Hub (vault.html) - REVISED FOR TASK SCHEDULER & DELETE FIX
+ */
+function initializeVaultPage() {
+    
+    // --- 1. STATE MANAGEMENT (Source of Truth) ---
+    let assetState = [
+        { id: 'v1', name: 'Instagram Profile', type: 'Social', icon: 'instagram', url: 'https://instagram.com/kuberbassi' },
+        { id: 'v2', name: 'YouTube Channel', type: 'Video', icon: 'youtube', url: 'https://youtube.com/channel/yourchannel' },
+        { id: 'v3', name: 'WhatsApp Web', type: 'Messaging', icon: 'message-square', url: 'https://web.whatsapp.com/' },
+        { id: 'v4', name: 'Facebook Feed', type: 'Social', icon: 'facebook', url: 'https://facebook.com/me' },
+        { id: 'v5', name: 'GitHub Repos', type: 'Dev', icon: 'github', url: 'https://github.com/kuberbassi' },
+    ];
+    let activeFilter = 'All';
+    let searchQuery = '';
+    let assetToDeleteId = null; 
+    let currentModalAsset = null; // Used by both CRUD and Scheduler
+
+    // --- 2. DOM ELEMENTS ---
+    const mainVaultGrid = document.getElementById('main-vault-grid');
+    const vaultEmptyMessage = document.getElementById('vault-empty-message');
+    const assetSearchInput = document.getElementById('asset-search-input');
+    const assetFilterBar = document.getElementById('asset-filter-bar');
+    const addAssetButton = document.getElementById('add-asset-button');
+
+    // CRUD Modal Elements
+    const assetModal = document.getElementById('asset-modal');
+    const assetModalTitle = document.getElementById('asset-modal-title');
+    const assetModalActionButton = document.getElementById('asset-modal-action-button');
+    const assetModalDeleteButton = document.getElementById('asset-modal-delete-button'); // TARGET OF THE FIX
+    const assetIdInput = document.getElementById('asset-id-input');
+    const assetNameInput = document.getElementById('asset-name-input');
+    const assetTypeSelect = document.getElementById('asset-type-select');
+    const assetIconSelect = document.getElementById('asset-icon-select');
+    const assetUrlInput = document.getElementById('asset-url-input');
+    const securityStatus = document.getElementById('security-status'); 
+    const assetModalCancelButton = document.getElementById('asset-modal-cancel-button');
+    
+    // Task Scheduler Modal Elements
+    const taskSchedulerModal = document.getElementById('task-scheduler-modal');
+    const taskSchedulerTitle = document.getElementById('task-scheduler-title');
+    const taskSchedulerText = document.getElementById('task-scheduler-text-input');
+    const taskSchedulerDuration = document.getElementById('task-scheduler-duration-input');
+    const taskSchedulerCancel = document.getElementById('task-scheduler-cancel-button');
+    const taskSchedulerAdd = document.getElementById('task-scheduler-add-button');
+
+    // Delete Confirm Modal
+    const deleteConfirmModal = document.getElementById('delete-asset-confirm-modal');
+    const deleteConfirmButton = document.getElementById('delete-asset-confirm-button');
+    const deleteCancelButton = document.getElementById('delete-asset-cancel-button');
+    const deleteConfirmMessage = document.getElementById('delete-asset-confirm-message');
+
+
+    // --- 3. CORE RENDER FUNCTION ---
+    function renderAssets() {
+        // ... (Filtering/Search logic unchanged) ...
+        let filteredAssets = assetState;
+
+        if (activeFilter !== 'All') {
+            filteredAssets = filteredAssets.filter(asset => asset.type === activeFilter);
+        }
+
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            filteredAssets = filteredAssets.filter(asset => 
+                asset.name.toLowerCase().includes(query) || 
+                asset.url.toLowerCase().includes(query) ||
+                asset.type.toLowerCase().includes(query)
+            );
+        }
+
+        if (!mainVaultGrid) return;
+        mainVaultGrid.innerHTML = ''; 
+
+        if (filteredAssets.length === 0) {
+            vaultEmptyMessage.style.display = 'block';
+        } else {
+            vaultEmptyMessage.style.display = 'none';
+        }
+
+        filteredAssets.forEach(asset => {
+            const item = document.createElement('div');
+            item.className = 'vault-item';
+            item.dataset.id = asset.id;
+            item.dataset.url = asset.url; 
+            if (asset.type === 'Dev' || asset.type === 'Video') {
+                 item.classList.add('action-task'); 
+            }
+
+            item.innerHTML = `
+                <div class="context-menu">
+                    <button class="edit-asset-button" data-id="${asset.id}" title="Edit"><i data-feather="edit-2" style="width: 16px;"></i></button>
+                    <button class="delete-asset-button" data-id="${asset.id}" title="Delete"><i data-feather="x" style="width: 16px;"></i></button>
+                </div>
+                <i data-feather="${asset.icon}"></i>
+                <p>${asset.name}</p>
+                <span>${asset.type}</span>
+            `;
+            mainVaultGrid.appendChild(item);
+        });
+
+        const addTile = document.createElement('div');
+        addTile.className = 'vault-item add-new';
+        addTile.id = 'add-new-vault-tile';
+        addTile.innerHTML = `<i data-feather="plus-circle"></i><p>Add Link</p><span></span>`;
+        mainVaultGrid.appendChild(addTile);
+        
+        attachAssetActionListeners();
+        feather.replace();
+    }
+
+    // --- 4. ACTION LISTENERS ATTACHMENT (CRITICAL CHANGE) ---
+    function attachAssetActionListeners() {
+        // Must remove old listeners before adding new ones
+        mainVaultGrid.querySelectorAll('.vault-item:not(.add-new)').forEach(item => {
+             item.replaceWith(item.cloneNode(true));
+        });
+        
+        // Re-get new nodes after replacement
+        const liveItems = mainVaultGrid.querySelectorAll('.vault-item:not(.add-new)');
+
+        // Edit/Delete Listeners (Re-attached to new nodes)
+        mainVaultGrid.querySelectorAll('.edit-asset-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                openAssetModal(e.currentTarget.dataset.id);
+            });
+        });
+
+        mainVaultGrid.querySelectorAll('.delete-asset-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const asset = assetState.find(a => a.id === e.currentTarget.dataset.id);
+                if (asset) {
+                    showDeleteConfirmModal(asset.id, asset.name);
+                }
+            });
+        });
+
+        // CRITICAL: New direct click action - launches URL or PROMPTS TASK SCHEDULER
+        liveItems.forEach(item => {
+             item.addEventListener('click', handleVaultItemClick);
+        });
+
+        // Add Asset Tile Listener
+        const addTile = document.getElementById('add-new-vault-tile');
+        if (addTile) addTile.addEventListener('click', () => openAssetModal(null));
+    }
+
+    /**
+     * Handles the click on a vault item, launching the link or opening the task scheduler.
+     */
+    function handleVaultItemClick(e) {
+        if (e.target.closest('.context-menu')) return; 
+
+        const item = e.currentTarget;
+        const url = item.dataset.url;
+        const assetId = item.dataset.id;
+        const asset = assetState.find(a => a.id === assetId);
+
+        if (!asset || !url) return;
+
+        // --- PRODUCTION TASK SCHEDULER LOGIC ---
+        if (asset.type === 'Dev' || asset.type === 'Video') {
+            currentModalAsset = asset;
+            openTaskSchedulerModal();
+        } else {
+            // Regular Social/Messaging link - launch directly
+            window.open(url, '_blank');
+            if (typeof showFlashMessage === 'function') {
+                 showFlashMessage(`Launching ${asset.name}...`, 'link');
+            }
+        }
+    }
+
+
+    // --- 5. MODAL CONTROL (Includes new Task Scheduler) ---
+    
+    // CRUD Modal functions (openAssetModal, hideAssetModal, showDeleteConfirmModal - Unchanged)
+    function openAssetModal(assetId) {
+        if (!assetModal) return;
+        
+        assetModal.style.display = 'flex';
+        assetModalDeleteButton.style.display = 'none'; 
+        assetIdInput.value = '';
+        assetNameInput.value = '';
+        assetTypeSelect.value = 'Social';
+        assetIconSelect.value = 'instagram';
+        assetUrlInput.value = '';
+        
+        if(securityStatus) securityStatus.style.display = 'none';
+        
+        if (assetId) {
+            const asset = assetState.find(a => a.id === assetId);
+            if (!asset) return;
+
+            assetModalTitle.textContent = `Edit Link: ${asset.name}`;
+            assetModalActionButton.textContent = 'Save Changes';
+            assetModalActionButton.dataset.mode = 'edit';
+            assetModalDeleteButton.style.display = 'block'; 
+            
+            assetIdInput.value = asset.id;
+            assetNameInput.value = asset.name;
+            assetTypeSelect.value = asset.type;
+            assetIconSelect.value = asset.icon || 'link';
+            assetUrlInput.value = asset.url || '';
+
+        } else {
+            assetModalTitle.textContent = 'Add New Social Link';
+            assetModalActionButton.textContent = 'Add Link';
+            assetModalActionButton.dataset.mode = 'add';
+        }
+        feather.replace();
+    }
+    
+    function hideAssetModal() {
+        if (assetModal) assetModal.style.display = 'none';
+        assetIdInput.value = ''; 
+    }
+
+    function showDeleteConfirmModal(id, name) {
+        assetToDeleteId = id;
+        deleteConfirmMessage.textContent = `Are you sure you want to delete the link: "${name}"? This action cannot be undone.`;
+        deleteConfirmModal.style.display = 'flex';
+        hideAssetModal();
+    }
+    
+    // NEW: Task Scheduler Modal Functions
+    function openTaskSchedulerModal() {
+        if (!taskSchedulerModal || !currentModalAsset) return;
+
+        taskSchedulerTitle.textContent = `Schedule Focus: ${currentModalAsset.name}`;
+        taskSchedulerText.placeholder = currentModalAsset.type === 'Dev' ? 
+            "e.g., Code for LifeMirror Feature X" : "e.g., Produce new guitar riff";
+        taskSchedulerText.value = '';
+        taskSchedulerDuration.value = '60'; // Default to 60 minutes
+
+        taskSchedulerModal.style.display = 'flex';
+    }
+
+    function hideTaskSchedulerModal() {
+        if (taskSchedulerModal) taskSchedulerModal.style.display = 'none';
+        currentModalAsset = null;
+    }
+
+
+    // --- 6. CRUD OPERATIONS ---
+    
+    // Save/Update Link (assetModalActionButton listener)
+    if (assetModalActionButton) {
+        assetModalActionButton.addEventListener('click', () => {
+            const mode = assetModalActionButton.dataset.mode;
+            const name = assetNameInput.value.trim();
+            const type = assetTypeSelect.value;
+            const icon = assetIconSelect.value;
+            const url = assetUrlInput.value.trim();
+            const id = assetIdInput.value;
+
+            if (!name || !url) {
+                alert('Platform Name and URL are required.');
+                return;
+            }
+
+            if (mode === 'add') {
+                const newAsset = { 
+                    id: 'v' + Date.now(), 
+                    name, 
+                    type, 
+                    icon, 
+                    url
+                };
+                assetState.push(newAsset);
+            } else if (mode === 'edit') {
+                const index = assetState.findIndex(a => a.id === id);
+                if (index !== -1) {
+                    assetState[index] = { ...assetState[index], name, type, icon, url };
+                }
+            }
+            
+            renderAssets();
+            hideAssetModal();
+            if (typeof showFlashMessage === 'function') {
+                 showFlashMessage(`Link saved: ${name}`, 'link');
+            }
+        });
+    }
+
+    // Delete Asset
+    function deleteAsset(id) {
+        assetState = assetState.filter(asset => asset.id !== id);
+        renderAssets();
+        deleteConfirmModal.style.display = 'none';
+        if (typeof showFlashMessage === 'function') {
+            showFlashMessage('Link deleted.', 'trash-2');
+        }
+    }
+    
+    // NEW: Task Scheduler Action Listener
+    if (taskSchedulerAdd) {
+        taskSchedulerAdd.addEventListener('click', () => {
+            const taskText = taskSchedulerText.value.trim();
+            const duration = parseInt(taskSchedulerDuration.value);
+
+            if (!taskText || isNaN(duration) || duration <= 0) {
+                alert('Please enter a task description and a valid duration (in minutes).');
+                return;
+            }
+
+            // 1. Log the task to the Tasks page (Simulated integration)
+            addNewTaskFromVault(taskText, duration); 
+
+            // 2. Open the URL now that the task is logged
+            window.open(currentModalAsset.url, '_blank');
+            
+            // 3. Close the modal
+            hideTaskSchedulerModal();
+        });
+    }
+
+
+    // --- 7. EVENT LISTENERS SETUP (Includes new Task Scheduler Modal Listeners and Delete Fix) ---
+    
+    // CRUD Listeners (Unchanged)
+    if (addAssetButton) addAssetButton.addEventListener('click', () => openAssetModal(null));
+    if (assetModalCancelButton) assetModalCancelButton.addEventListener('click', hideAssetModal);
+
+    // FIX: Listener for the "Delete Link" button inside the Edit Modal
+    if (assetModalDeleteButton) {
+        assetModalDeleteButton.addEventListener('click', () => {
+            const name = assetNameInput.value;
+            const id = assetIdInput.value;
+            if (id) {
+                showDeleteConfirmModal(id, name);
+            }
+        });
+    }
+    
+    // Confirmation Modal Listeners
+    if (deleteConfirmButton) {
+        deleteConfirmButton.addEventListener('click', () => {
+            if (assetToDeleteId) {
+                deleteAsset(assetToDeleteId);
+                assetToDeleteId = null;
+            }
+        });
+    }
+    
+    // FIX: Cancel listener to simply close the delete modal
+    if (deleteCancelButton) deleteCancelButton.addEventListener('click', () => {
+        deleteConfirmModal.style.display = 'none';
+        // Note: No need to reopen the edit modal behind it.
+    });
+    
+    // NEW: Task Scheduler Modal Listeners
+    if (taskSchedulerCancel) taskSchedulerCancel.addEventListener('click', hideTaskSchedulerModal);
+    if (taskSchedulerModal) taskSchedulerModal.addEventListener('click', (e) => {
+        if (e.target === taskSchedulerModal) hideTaskSchedulerModal();
+    });
+    
+
+    // Filter and Search Listeners (Unchanged)
+    if (assetFilterBar) {
+        assetFilterBar.querySelectorAll('.filter-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                assetFilterBar.querySelectorAll('.filter-item').forEach(i => i.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                activeFilter = e.currentTarget.dataset.filter;
+                renderAssets();
+            });
+        });
+    }
+
+    if (assetSearchInput) {
+        assetSearchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.trim();
+            renderAssets();
+        });
+    }
+
+    // --- 8. INITIALIZATION ---
+    renderAssets(); 
 }
 
 /**
