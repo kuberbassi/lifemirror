@@ -327,12 +327,6 @@ body {
   }
 }
 
-.life-score-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  flex-grow: 1;
-}
 
 .radar-chart-placeholder {
   width: 200px;
@@ -2151,3 +2145,536 @@ body {
 .task-list .task-item.completed .task-actions button {
     color: #EEEEEE; /* Mute buttons when the task is completed */
 }
+/* --- DASHBOARD SCHEDULE & REMEDY LIST FIXES --- */
+
+/* Fix: Ensure Today's Schedule card content is clipped properly */
+.tasks-schedule {
+    /* Retains original span of 2 columns */
+    grid-column: span 2;
+    overflow: hidden; /* Prevent content from bleeding outside the card */
+}
+
+/* Fix: Clean up margins and borders on the main schedule list */
+.tasks-schedule .task-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    /* Optional: Add a max height and scroll bar if the schedule gets too long */
+    max-height: 200px;
+    overflow-y: auto; 
+}
+
+/* Fix: Tweak the remedy list to remove vertical gaps and provide cleaner spacing */
+.ai-remedies .remedy-list {
+    /* Uses flex-direction: column; and gap: 12px; from existing styles */
+    gap: 10px; /* Reduce gap slightly for a tighter look */
+    margin: 0 0 10px 0; /* Remove default padding/margin issues */
+}
+
+/* Fix: Ensure list items within the dashboard schedule fit correctly */
+.tasks-schedule .task-item {
+    /* Reset vertical spacing for a cleaner look on the dashboard schedule */
+    padding: 8px 0; 
+    border-bottom: 1px solid #eee; 
+    /* Use flex for simplicity on dashboard list (instead of the complex grid used on tasks.html) */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tasks-schedule .task-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.tasks-schedule .task-item label {
+    margin-left: 12px;
+    flex-grow: 1;
+}
+/* --- DASHBOARD SCHEDULE & REMEDY LIST FIXES --- */
+
+/* Fix: Ensure Today's Schedule card content is clipped properly */
+.tasks-schedule {
+    grid-column: span 2;
+    overflow: hidden; 
+    /* Ensures the card doesn't expand due to internal padding/margins */
+}
+
+/* Fix: Tweak the remedy list to provide cleaner spacing */
+.ai-remedies .remedy-list {
+    gap: 10px; 
+    margin: 0 0 10px 0; 
+}
+
+/* Fix: Final list item styling for Today's Schedule to remove bleed */
+.tasks-schedule .task-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto; 
+    padding-right: 12px; /* Ensure scrollbar doesn't overlap text */
+}
+
+.tasks-schedule .task-item {
+    padding: 8px 0; 
+    border-bottom: 1px solid #eee; 
+    display: flex;
+    justify-content: flex-start; /* Align checkbox to the left */
+    align-items: center;
+}
+
+.tasks-schedule .task-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.tasks-schedule .task-item label {
+    margin-left: 12px;
+    flex-grow: 1; /* Allows label to take up space */
+}
+
+/* Ensure the task list is styled properly after items are added by JS */
+.task-item-empty {
+    padding: 12px 0;
+    color: var(--c-text-muted);
+}
+/* --- FIXES FOR THE ULTIMATE DASHBOARD ACTION CARD --- */
+
+/* 1. Base style for the unified action items (to override .remedy-item defaults) */
+.ai-remedies .remedy-list .remedy-item {
+    /* Remove default light-gray background to use context-specific colors/effects */
+    background: var(--c-bg-card);
+    border: 1px solid #f0f0f0; /* Use a thin, soft border for separation */
+    padding: 16px; /* Slightly more space */
+    border-radius: 12px;
+}
+
+/* 2. Style for Critical Alerts (Finance/Health alerts should visually pop) */
+.remedy-item[data-status="finance"], 
+.remedy-item[data-status="health"] {
+    background: #fffafa; /* Very light red/white-ish background to make it noticeable */
+    border-left: 5px solid var(--c-accent-red); /* Stronger left border for urgency */
+    padding-left: 11px; /* Adjust padding to make space for the border */
+}
+
+/* 3. Style for Standard Tasks (Low visual weight) */
+.remedy-item[data-status="task"] {
+    background: var(--c-bg-main); /* Light gray background to separate from urgent alerts */
+    border-left: 5px solid var(--c-primary); /* Thin green border for 'actionable' */
+    padding-left: 11px;
+}
+
+/* 4. Icon Coloring & Task Icon Correction */
+/* Ensure all icons are colored appropriately */
+.remedy-item[data-status="finance"] i { color: var(--c-accent-red); } /* Red icon for money alerts */
+.remedy-item[data-status="health"] i { color: var(--c-accent-blue); } /* Blue icon for health alerts */
+.remedy-item[data-status="task"] i { color: var(--c-text-muted); } /* Muted icon for tasks */
+
+
+/* 5. Completed State Look & Feel (After clicking the button) */
+.remedy-item.completed {
+    opacity: 0.6;
+    text-decoration: none; /* Remove line-through for a cleaner completion state */
+}
+
+.remedy-item.completed .remedy-button {
+    background: var(--c-bg-main) !important; /* Mute background */
+    color: var(--c-text-muted) !important; /* Mute text */
+    font-weight: 500;
+    cursor: default;
+    border: var(--c-border);
+}
+
+.remedy-item.completed p {
+    color: var(--c-text-muted);
+}
+/* --- FIX: Enforce Max Height and Scrolling for Actions Card --- */
+
+/* Target the list inside the 'Actions for Today' card */
+.ai-remedies .remedy-list {
+    /* Existing styles: gap: 10px; margin: 0 0 10px 0; */
+    
+    /* CRITICAL FIX: Set a maximum height to control the size */
+    max-height: 280px; /* Adjust this value based on desired card height (approx 4-5 items) */
+    
+    /* Enable vertical scrolling when content exceeds max-height */
+    overflow-y: auto; 
+    
+    /* Add padding to the right to prevent the scrollbar from obscuring text */
+    padding-right: 12px; 
+    
+    /* Ensure the list content is properly displayed as a column */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure the task items maintain their spacing despite the scroll container */
+.ai-remedies .remedy-list .remedy-item {
+    flex-shrink: 0; /* Prevents items from compressing unnecessarily */
+}
+/* --- FIXES FOR DASHBOARD KPI CLARITY --- */
+
+/* 1. Ensure the steps icon is aligned correctly with the huge text */
+.kpi-value i[data-feather=" yürüyüş"] {
+    /* Style for the steps icon */
+    width: 28px; 
+    height: 28px; 
+    margin-right: 8px; 
+    color: var(--c-primary);
+    /* Align vertically with the baseline of the large text */
+    vertical-align: middle; 
+}
+
+/* 2. Style the "Due" label to look like standard label text, not massive KPI text */
+#finance-due-label {
+    font: var(--font-caption); /* Use a smaller font */
+    font-weight: 700;
+    color: var(--c-text-muted); /* Mute the color */
+    display: inline; /* Keep it next to the number */
+    margin-left: 8px;
+    vertical-align: middle;
+}
+/* --- FIXES FOR DASHBOARD KPI CLARITY --- */
+
+/* 1. Ensure the steps icon is aligned correctly with the huge text */
+.kpi-value i[data-feather="activity"] {
+    /* Style for the steps icon */
+    width: 28px; 
+    height: 28px; 
+    margin-right: 8px; 
+    color: var(--c-primary);
+    /* Align vertically with the baseline of the large text */
+    vertical-align: middle; 
+}
+
+/* 2. Style the "Due" label to look like standard label text, not massive KPI text */
+#finance-due-label {
+    font: var(--font-caption); /* Use a smaller font */
+    font-weight: 700;
+    color: var(--c-text-muted); /* Mute the color */
+    display: inline; /* Keep it next to the number */
+    margin-left: 8px;
+    vertical-align: middle;
+}
+/* --- FIX: Reduce the font size for Steps/Health Card Primary Value --- */
+
+/* Target the specific element displaying the steps value on the dashboard */
+#kpi-steps-value {
+    /* Override the default var(--font-kpi) which is 36px */
+    font-size: 30px; /* Reduced to a slightly smaller size */
+    line-height: 1.2;
+    font-weight: 700;
+    margin-bottom: 4px; /* Adjust spacing after reducing size */
+}
+
+/* Ensure the Steps label part stays vertically aligned and doesn't push down */
+#kpi-steps-value:before {
+    content: "Steps:"; /* The text part is already handled by JS, but this ensures robustness */
+    font-size: 14px; 
+    font-weight: 600;
+    color: var(--c-text-dark);
+    margin-right: 8px;
+    display: none;
+    vertical-align: middle;
+}
+/* --- FINAL FIX: Health Card Label and Size Correction --- */
+
+/* 1. Target the overall Steps value element */
+#kpi-steps-value {
+    /* Temporarily reset the font size, we'll reapply it below */
+    font: var(--font-kpi); 
+    font-size: 30px !important; /* Enforce the desired smaller KPI size */
+    line-height: 1.2;
+    font-weight: 700;
+    margin-bottom: 4px; 
+}
+
+/* 2. Inject the "Steps:" label via CSS *before* the numerical value for separation */
+#kpi-steps-value:before {
+    content: "Steps: "; /* Adds the missing label text */
+    font-size: 16px; /* Size for the label text */
+    font-weight: 600;
+    color: var(--c-text-dark);
+    margin-right: 8px;
+    /* Ensure the label aligns vertically with the large number */
+    vertical-align: middle; 
+}
+
+/* 3. Ensure the numerical part remains large */
+#steps-number {
+    /* If the JS inserted a span (as suggested in the fix), ensure it uses a large font */
+    font-size: 40px; /* Make the number larger than the label */
+    font-weight: 700;
+}
+/* --- Life Score Card Specific Fixes --- */
+
+/* 1. Set up the score to be HUGE in the header (Top Right) */
+.life-score .card-metric {
+    /* Override default font-kpi and make it larger, matching the image */
+    font-size: 48px; 
+    font-weight: 700;
+    line-height: 1;
+    margin-left: auto; /* Push the score to the right of the H3 */
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+/* 3. Style the Radar Chart Placeholder */
+.radar-chart-placeholder {
+    width: 200px; /* Keep the circular dimensions */
+    height: 200px;
+    flex-shrink: 0; /* Prevent it from shrinking */
+    margin-right: 20px; /* Space between chart and weights */
+}
+
+/* 4. Adjustments for the Weights List */
+.score-weights {
+    flex-grow: 1; /* Allow the list to fill the remaining space */
+    max-width: 150px; /* Constrain width slightly for better alignment */
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.score-weights li {
+    font: var(--font-caption);
+    font-weight: 500;
+    padding: 6px 0;
+    color: var(--c-text-dark); /* Ensure text is dark and visible */
+}
+/* --- LAYOUT FIXES: Bottom Row Alignment --- */
+
+/* Ensure the dashboard grid is robust (already done, but check flex-grow) */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 equal columns */
+    grid-auto-rows: minmax(150px, auto);
+    gap: 24px;
+    flex-grow: 1; 
+    /* The bottom row (Mood, Health, Finance, Social Hub) spans 4 columns, 1fr each */
+}
+
+/* Ensure Kpi cards are consistent squares/rectangles */
+.card.kpi-card {
+    /* Reset any unexpected grid spanning */
+    grid-column: span 1; 
+}
+
+
+/* --- LIFE SCORE CARD: Remove unnecessary overrides that caused misalignment --- */
+
+
+/* Reset the Chart Placeholder to its clean circular style */
+.radar-chart-placeholder {
+    width: 150px !important; /* Smaller size for better layout */
+    height: 150px !important;
+    border-radius: 50%;
+    background: var(--c-bg-main);
+    border: var(--c-border);
+    display: grid;
+    place-items: center;
+    color: var(--c-text-muted);
+    font: var(--font-caption);
+    flex-shrink: 0;
+    margin-right: 20px;
+}
+
+/* Reset the weights list font to prevent it from dominating */
+.score-weights li {
+    font-size: 14px; /* Use font-caption size explicitly */
+    font-weight: 500;
+    padding: 6px 0;
+    color: var(--c-text-dark);
+    line-height: 1.4;
+}
+/* --- HEALTH CARD FINAL STYLING FIXES (FOR STEPS: 4,000) --- */
+
+/* 1. Ensure the overall KPI value container holds the elements */
+#kpi-steps-value {
+    /* Reset font size to baseline to allow granular control of the children */
+    font-size: 1px !important; 
+    line-height: 1.2;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+/* 2. Style the 'Steps:' label part to be smaller */
+.kpi-steps-label {
+    font-size: 18px; 
+    font-weight: 600;
+    color: var(--c-text-dark);
+    margin-right: 8px;
+    display: inline-block;
+}
+
+/* 3. Style the numerical value to be the largest element in the card */
+#steps-number-val {
+    font: var(--font-kpi); /* Reapply the large font style */
+    font-size: 40px !important; 
+    font-weight: 700;
+    color: var(--c-text-dark);
+}
+/* --- LIFE SCORE CARD FINAL LAYOUT & CHART FIXES --- */
+
+/* 1. Ensure Life Score Content is clean */
+.life-score-content {
+    display: flex; 
+    align-items: flex-start; 
+    flex-grow: 1;
+    padding: 15px 0; 
+    justify-content: space-between;
+}
+
+/* 2. Style the new Chart Container */
+.life-score .chart-container {
+    width: 150px !important; /* Fixed size to stabilize layout */
+    height: 150px !important;
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+
+/* 3. Style the Weights List */
+.score-weights li {
+    font-size: 14px; 
+    font-weight: 500;
+    padding: 6px 0;
+    line-height: 1.4;
+    color: var(--c-text-dark);
+}
+
+
+/* --- HEALTH CARD FONT FIXES (TO SOLVE DUPLICATION & SIZING) --- */
+
+/* 1. Reset #kpi-steps-value container to baseline */
+#kpi-steps-value {
+    /* Reset font size to baseline to allow granular control of the children */
+    font-size: 1px !important; 
+    line-height: 1.2;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+/* 2. Style the 'Steps:' label part to be visible */
+.kpi-steps-label {
+    font-size: 18px; 
+    font-weight: 600;
+    color: var(--c-text-dark);
+    margin-right: 8px;
+    display: inline-block;
+}
+
+/* 3. Style the numerical value to be the largest element (The Number) */
+#steps-number-val {
+    font: var(--font-kpi); /* Reapply the large font style */
+    font-size: 40px !important; 
+    font-weight: 700;
+    color: var(--c-text-dark);
+}
+
+/* --- FINANCE CARD DUE LABEL FIXES --- */
+#finance-due-label {
+    font: var(--font-caption);
+    font-weight: 700;
+    color: var(--c-text-muted);
+    display: inline;
+    margin-left: 8px;
+    vertical-align: top; /* Align with the top of the currency symbol */
+}
+/* --- FINAL FIX: CHART, STEPS, AND LAYOUT STABILITY --- */
+
+/* 1. Style the Chart Container (Life Score) */
+.life-score .chart-container {
+    width: 220px !important; /* Fixed size for layout stability */
+    height: 220px !important;
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+
+/* 2. Style the Weights List */
+.score-weights li {
+    font-size: 14px; 
+    font-weight: 500;
+    padding: 6px 0;
+    line-height: 1.4;
+    color: var(--c-text-dark);
+}
+
+/* --- HEALTH CARD FONT FIXES (TO SOLVE DUPLICATION & SIZING) --- */
+
+/* 1. Reset #kpi-steps-value container to hold the elements */
+#kpi-steps-value {
+    /* Font sizes are controlled by child elements, not the parent */
+    font-size: 1px !important; 
+    line-height: 1.2;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+/* 2. Style the 'Steps:' label part to be smaller */
+.kpi-steps-label {
+    font-size: 18px; 
+    font-weight: 600;
+    color: var(--c-text-dark);
+    margin-right: 8px;
+    display: inline-block;
+}
+
+/* 3. Style the numerical value to be the largest element (The Number) */
+#steps-number-val {
+    font: var(--font-kpi); /* Reapply the large font style */
+    font-size: 40px !important; 
+    font-weight: 700;
+    color: var(--c-text-dark);
+}
+
+/* --- FINANCE CARD DUE LABEL FIXES --- */
+#finance-due-label {
+    font: var(--font-caption);
+    font-weight: 700;
+    color: var(--c-text-muted);
+    display: inline;
+    margin-left: 8px;
+    vertical-align: top;
+}
+/* --- HEALTH CARD FONT FIXES (TO SOLVE DUPLICATION & SIZING) --- */
+
+/* 1. Reset #kpi-steps-value container to hold the elements */
+#kpi-steps-value {
+    /* Resetting the font-size to avoid inheritance issues */
+    font-size: 1px !important; 
+    line-height: 1.2;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+/* 2. REMOVED CONFLICTING :before PSEUDO-ELEMENT RULE HERE! */
+
+/* 3. Style the 'Steps:' label part to be visible and smaller */
+.kpi-steps-label {
+    font-size: 18px; /* The text "Steps:" is medium size */
+    font-weight: 600;
+    color: var(--c-text-dark);
+    margin-right: 8px;
+    display: inline-block;
+}
+
+/* 4. Style the numerical value to be the largest element */
+#steps-number-val {
+    font: var(--font-kpi); /* Use the large KPI font variable */
+    font-size: 40px !important; /* Enforce the large size */
+    font-weight: 700;
+    color: var(--c-text-dark);
+}
+/* LifeMirror/style.css (Around line 870) */
+
+/* --- LIFE SCORE CARD FINAL LAYOUT & CHART FIXES --- */
+
+/* 1. Style the new Chart Container */
+.life-score .chart-container {
+    /* FIX: Increased size from 220px to 240px to fill the gap better */
+    width: 240px !important; 
+    height: 240px !important;
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+

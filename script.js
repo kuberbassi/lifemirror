@@ -2,10 +2,10 @@
 // GLOBAL STATE & CORE HELPERS
 // ===============================================
 
-var calendar = null; 
+var calendar = null;
 let sleepCheckInterval = null;
-let IS_SMART_NOTIFICATIONS_MOCK = true; 
-let IS_NOTIFICATION_PANEL_OPEN = false; 
+let IS_SMART_NOTIFICATIONS_MOCK = true;
+let IS_NOTIFICATION_PANEL_OPEN = false;
 
 // --- DATE HELPER (Used for initial state setup and calculations) ---
 const getTodayDateString = () => {
@@ -16,6 +16,7 @@ const getTodayDateString = () => {
     return `${year}-${month}-${day}`;
 }
 const TODAY_DATE = getTodayDateString(); // Dynamic date for today
+
 
 // --- TASKS STATE (Global for all Task/Dashboard pages) ---
 let taskState = [
@@ -34,10 +35,10 @@ let taskState = [
 // --- FITNESS STATE (Global for all Fitness/Dashboard pages) ---
 let fitnessHistory = [
     { id: 1, date: '2025-10-25', time: '23:00', type: 'sleep', value: 5.5, unit: 'hours' }, // LOW SLEEP for critical alert
-    { id: 2, date: TODAY_DATE, time: '10:00', type: 'steps', value: 3500, unit: 'steps' }, 
+    { id: 2, date: TODAY_DATE, time: '10:00', type: 'steps', value: 3500, unit: 'steps' },
     { id: 3, date: TODAY_DATE, time: '14:00', type: 'steps', value: 500, unit: 'steps' },
-    { id: 4, date: TODAY_DATE, time: '12:00', type: 'calories_out', value: 300, unit: 'kcal' }, 
-    { id: 5, date: TODAY_DATE, time: '17:00', type: 'workout', value: 60, unit: 'min' } 
+    { id: 4, date: TODAY_DATE, time: '12:00', type: 'calories_out', value: 300, unit: 'kcal' },
+    { id: 5, date: TODAY_DATE, time: '17:00', type: 'workout', value: 60, unit: 'min' }
 ];
 let completedSuggestions = [];
 
@@ -46,7 +47,7 @@ let moodHistory = [
     { date: '2025-10-23', mood: 3, note: 'Had a productive morning.', stress: 30, isFinal: true },
     { date: '2025-10-24', mood: 2, note: 'Normal work day.', stress: 45, isFinal: true },
     { date: '2025-10-25', mood: 1, note: 'Stressed about project deadline.', stress: 70, isFinal: true }, // HIGH STRESS for critical alert
-    { date: TODAY_DATE, mood: 2, note: 'Daily check-in placeholder.', stress: 45, isFinal: false }, 
+    { date: TODAY_DATE, mood: 2, note: 'Daily check-in placeholder.', stress: 45, isFinal: false },
 ];
 const moodMap = {
     'awful': { label: 'Awful', value: 0, color: 'var(--c-accent-red)' },
@@ -61,23 +62,75 @@ let billState = [
     { id: 'bill1', name: 'Netflix Subscription', category: 'Streaming Service', amount: 500, dueDate: '2025-12-27', frequency: 'monthly', icon: 'tv', paid: false, overdue: false, paymentLink: 'https://netflix.com' },
     { id: 'bill2', name: 'Electricity Bill', category: 'Utilities', amount: 2000, dueDate: '2025-10-23', frequency: 'monthly', icon: 'home', paid: false, overdue: true, paymentLink: 'https://paytm.com/electricity' }, // OVERDUE for critical alert
     { id: 'bill3', name: 'Mobile Phone Plan', category: 'Telecommunication', amount: 1000, dueDate: '2025-11-20', frequency: 'monthly', icon: 'smartphone', paid: false, overdue: false, paymentLink: 'https://jio.com' },
-    { id: 'bill4', name: 'Gym Membership', category: 'Health & Wellness', amount: 1200, dueDate: '2025-10-23', frequency: 'annually', icon: 'heart', paid: true, overdue: false, paymentLink: 'https://gymwebsite.com' }, 
+    { id: 'bill4', name: 'Gym Membership', category: 'Health & Wellness', amount: 1200, dueDate: '2025-10-23', frequency: 'annually', icon: 'heart', paid: true, overdue: false, paymentLink: 'https://gymwebsite.com' },
 ];
-let IS_GOOGLE_SIGNED_IN = false; 
+let IS_GOOGLE_SIGNED_IN = false;
+let IS_CLERK_SIGNED_IN = false; // NEW GLOBAL STATE
 
+const MOCK_CLERK_USER = {
+    firstName: "Kuber",
+    lastName: "Bassi",
+    email: "kuber.bassi@clerk-mock.dev",
+    profilePicUrl: "https://i.pravatar.cc/40?u=kuber"
+};
 
 // --- GENERAL HELPER FUNCTIONS ---
+function updateUserProfileUI() {
+    const profilePic = document.querySelector('.profile-pic');
+    const profileNameInput = document.getElementById('profile-name-input');
+    const profileEmailInput = document.getElementById('profile-email-input');
+
+    if (profilePic) {
+        profilePic.src = MOCK_CLERK_USER.profilePicUrl;
+        profilePic.alt = `Profile: ${MOCK_CLERK_USER.firstName}`;
+    }
+
+    // Only update settings page if elements exist
+    if (profileNameInput) {
+        profileNameInput.value = `${MOCK_CLERK_USER.firstName} ${MOCK_CLERK_USER.lastName}`;
+    }
+    if (profileEmailInput) {
+        profileEmailInput.value = MOCK_CLERK_USER.email;
+    }
+}
 
 // Helper to calculate days difference (for finance)
 function calculateDueDays(dueDateString) {
-    if (!dueDateString) return 999; 
+    if (!dueDateString) return 999;
     const today = new Date(getTodayDateString());
-    const due = new Date(dueDateString + 'T00:00:00'); 
-    
+    const due = new Date(dueDateString + 'T00:00:00');
+
     const diffTime = due.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return diffDays;
+}
+
+// Helper to calculate the next recurring date (Automation Core)
+function calculateNextDueDate(currentDueDate, frequency) {
+    if (frequency === 'one-time') return null;
+
+    const date = new Date(currentDueDate + 'T00:00:00');
+
+    if (frequency === 'monthly') {
+        date.setMonth(date.getMonth() + 1);
+    } else if (frequency === 'quarterly') {
+        date.setMonth(date.getMonth() + 3);
+    } else if (frequency === 'annually') {
+        date.setFullYear(date.getFullYear() + 1);
+    }
+
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Mock helper to expose calculateNextDueDate to other functions (not strictly necessary but maintains pattern)
+function getBillAutomationHelpers() {
+    return {
+        calculateNextDueDate: calculateNextDueDate
+    };
 }
 
 /**
@@ -103,24 +156,24 @@ function showFlashMessage(message, iconName = 'check-circle') {
 // Notification Panel Logic (CRITICAL: Needs to be able to access global mockNotifications)
 function toggleNotificationPanel() {
     const panel = document.getElementById('global-notification-panel');
-    if (!panel) return; 
+    if (!panel) return;
 
     const bellIcon = document.querySelector('.control-icon-wrapper i[data-feather="bell"]');
     const bellWrapper = bellIcon ? bellIcon.closest('.control-icon-wrapper') : null;
 
     const isCurrentlyOpen = panel.classList.contains('active');
     IS_NOTIFICATION_PANEL_OPEN = !isCurrentlyOpen;
-    
+
     if (IS_NOTIFICATION_PANEL_OPEN) {
-        renderNotificationPanel(panel); 
+        renderNotificationPanel(panel);
         panel.classList.add('active');
         if (bellWrapper) {
-             bellWrapper.classList.add('active-notification'); 
+            bellWrapper.classList.add('active-notification');
         }
     } else {
         panel.classList.remove('active');
         if (bellWrapper) {
-             bellWrapper.classList.remove('active-notification');
+            bellWrapper.classList.remove('active-notification');
         }
     }
 }
@@ -139,12 +192,12 @@ function renderNotificationPanel(panel) {
     ].filter(n => n.active);
 
 
-    const notificationsToDisplay = IS_SMART_NOTIFICATIONS_MOCK 
+    const notificationsToDisplay = IS_SMART_NOTIFICATIONS_MOCK
         ? activeNotifications.filter(n => n.type === 'critical')
-        : activeNotifications; 
+        : activeNotifications;
 
     let content = '<h4>Notifications</h4>';
-    
+
     if (notificationsToDisplay.length === 0) {
         content += `<div class="notification-item-empty">You're all caught up!</div>`;
     } else {
@@ -157,16 +210,16 @@ function renderNotificationPanel(panel) {
             `;
         });
     }
-    
+
     panel.innerHTML = content;
     feather.replace();
-    
+
     panel.querySelectorAll('.notification-item').forEach(item => {
         item.addEventListener('click', () => {
-             const link = item.dataset.link;
-             if (link) {
-                 window.location.href = link;
-             }
+            const link = item.dataset.link;
+            if (link) {
+                window.location.href = link;
+            }
         });
     });
 }
@@ -188,7 +241,7 @@ function addNewTaskFromVault(text, duration) {
     };
     taskState.push(newTask);
     if (document.getElementById('dashboard-grid')) {
-         renderDashboardMetrics();
+        renderDashboardMetrics();
     }
 }
 
@@ -197,28 +250,28 @@ function startSleepNotificationCheck(fitnessHistory) {
     if (sleepCheckInterval) {
         clearInterval(sleepCheckInterval);
     }
-    
+
     const MORNING_START_HOUR = 6;
     const MORNING_END_HOUR = 10;
-    const CHECK_INTERVAL_MS = 3600000; 
+    const CHECK_INTERVAL_MS = 3600000;
 
     function checkSleepLog() {
         const now = new Date();
         const currentHour = now.getHours();
-        
+
         if (currentHour >= MORNING_START_HOUR && currentHour < MORNING_END_HOUR) {
             const yesterday = new Date(now);
             yesterday.setDate(now.getDate() - 1);
             const yesterdayDate = `${yesterday.getFullYear()}-${(yesterday.getMonth() + 1).toString().padStart(2, '0')}-${yesterday.getDate().toString().padStart(2, '0')}`;
-            
+
             const hasLoggedSleep = fitnessHistory.some(log => log.date === yesterdayDate && log.type === 'sleep');
 
             if (!hasLoggedSleep) {
                 showFlashMessage("⏰ It's morning! Did you log your sleep for last night?", 'moon');
             }
         } else if (currentHour >= MORNING_END_HOUR) {
-             clearInterval(sleepCheckInterval);
-             sleepCheckInterval = null;
+            clearInterval(sleepCheckInterval);
+            sleepCheckInterval = null;
         }
     }
 
@@ -232,118 +285,359 @@ function startSleepNotificationCheck(fitnessHistory) {
 // ===============================================
 
 /**
- * Runs the dynamic calculations and updates the Dashboard UI. (NEW CORE FUNCTION)
+ * Runs the dynamic calculations and updates the Dashboard UI.
+ * This is the central source of truth for the dashboard page.
  */
 function renderDashboardMetrics() {
-    
+
     // --- 1. CALCULATE METRICS FROM GLOBAL STATE ---
-    
+
+    const TODAY_DATE = getTodayDateString();
+
     // A. Tasks/Schedule Metrics
     let totalPendingTasks = taskState.filter(t => t.type === 'task' && !t.completed).length;
     let totalCompletedTasks = taskState.filter(t => t.type === 'task' && t.completed).length;
     const totalTasks = totalPendingTasks + totalCompletedTasks;
     const taskCompletionRate = totalTasks > 0 ? Math.round((totalCompletedTasks / totalTasks) * 100) : 100;
     let scheduleItemsToday = taskState.filter(item => item.date === TODAY_DATE);
-    
+
     // B. Finance Metrics
-    const EARLY_PAYMENT_WINDOW = 7; // Bills due within 7 days are considered 'due this week'
+    const EARLY_PAYMENT_WINDOW = 7;
+    let overdueBill = billState.find(b => b.overdue && !b.paid);
     let totalBillsDue = billState.filter(b => !b.paid && calculateDueDays(b.dueDate) >= 0).length;
     let totalDueAmount = billState.filter(b => !b.paid && calculateDueDays(b.dueDate) >= 0 && calculateDueDays(b.dueDate) <= EARLY_PAYMENT_WINDOW)
-                                 .reduce((sum, bill) => sum + bill.amount, 0);
+        .reduce((sum, bill) => sum + bill.amount, 0);
     const completedBills = billState.filter(b => b.paid).length;
     const totalFinanceItems = billState.length;
     const financialHealth = totalFinanceItems > 0 ? Math.round((completedBills / totalFinanceItems) * 100) : 100;
+    let activeSubscriptionTotal = billState.filter(b => b.frequency !== 'one-time' && !b.paid)
+        .reduce((sum, bill) => sum + bill.amount, 0);
 
 
     // C. Fitness Metrics
     let totalStepsToday = fitnessHistory.filter(log => log.date === TODAY_DATE && log.type === 'steps')
-                                        .reduce((sum, log) => sum + log.value, 0);
-    const sleepLog = fitnessHistory.filter(log => log.type === 'sleep')
-                                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || {value: 0}; 
-    const sleepLastNight = sleepLog.value;
+        .reduce((sum, log) => sum + log.value, 0);
+    let totalCaloriesOutToday = fitnessHistory.filter(log => log.date === TODAY_DATE && log.type === 'calories_out')
+        .reduce((sum, log) => sum + log.value, 0);
+    let totalWaterIntake = fitnessHistory.filter(log => log.date === TODAY_DATE && log.type === 'water_intake')
+        .reduce((sum, log) => sum + log.value, 0);
 
+    const sleepLog = fitnessHistory.filter(log => log.type === 'sleep')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+        || { value: 0 };
+
+    const sleepLastNight = sleepLog.value;
+    const isLowSleep = sleepLastNight < 6 && sleepLastNight > 0;
 
     // D. Mood/Stress Metrics
-    const lastMood = moodHistory.filter(m => m.isFinal).sort((a,b) => a.date.localeCompare(b.date))[0] || moodHistory[moodHistory.length - 1];
-    const moodLabel = moodMap[Object.keys(moodMap).find(key => moodMap[key].value === lastMood.mood)]?.label || 'Neutral';
-    const stressIndex = lastMood.stress;
+    const latestEntry = moodHistory
+        .sort((a, b) => b.date.localeCompare(a.date))[0]
+        || { mood: 2, stress: 45, note: 'No recent log data.', isFinal: false };
+    const moodLabel = moodMap[Object.keys(moodMap).find(key => moodMap[key].value === latestEntry.mood)]?.label || 'Neutral';
+    const stressIndex = latestEntry.stress;
+    const isHighStress = stressIndex >= 70;
+    const moodNote = latestEntry.note ? latestEntry.note : (latestEntry.isFinal ? 'No note logged.' : 'Daily check-in pending.');
 
-    // E. Life Score (Simple Mock calculation based on current state)
-    let currentScore = 50; // Base score
-    currentScore += Math.round(taskCompletionRate / 10);
-    currentScore += Math.round(financialHealth / 10);
-    currentScore += (sleepLastNight >= 7) ? 10 : (sleepLastNight >= 5.5 ? 5 : 0);
-    currentScore += (stressIndex <= 50) ? 10 : 0;
-    currentScore += (totalStepsToday >= 5000) ? 5 : 0;
+    // E. Vault/Social Hub Metrics
+    const assetStateMock = (window.assetState && window.assetState.length > 0) ? window.assetState : [
+        { type: 'Social' }, { type: 'Video' }, { type: 'Messaging' }, { type: 'Dev' }, { type: 'Dev' }
+    ];
+    const totalVaultLinks = assetStateMock.length;
+    const uniqueCategories = [...new Set(assetStateMock.map(a => a.type))].length;
+
+
+    // F. Life Score Component Calculations (Component Scores: 0-100)
+    const componentScores = {
+        tasks: taskCompletionRate,
+        finance: financialHealth,
+        mood: 100 - stressIndex,
+        fitness: Math.min(100, (sleepLastNight / 8) * 50 + (totalStepsToday / 10000) * 50)
+    };
+
+    // G. Life Score (Calculation)
+    const lifeScoreWeights = { tasks: 0.25, finance: 0.20, fitness: 0.20, mood: 0.20, digital: 0.15 };
+    let currentScore = 0;
+    currentScore += Math.round(componentScores.tasks * lifeScoreWeights.tasks);
+    currentScore += Math.round(componentScores.finance * lifeScoreWeights.finance);
+    currentScore += Math.round(componentScores.fitness * lifeScoreWeights.fitness);
+    currentScore += Math.round(componentScores.mood * lifeScoreWeights.mood);
+    currentScore += Math.round(100 * lifeScoreWeights.digital);
     currentScore = Math.min(100, Math.max(0, currentScore));
 
 
     // --- 2. UPDATE UI CARDS (KPIs) ---
-    
+
     // Life Score Card
     const lifeScoreElement = document.getElementById('life-score-number');
     if (lifeScoreElement) lifeScoreElement.textContent = currentScore;
 
-    // Mood Card
+    // NEW: Update Life Score Component Weights with Calculated Score
+    if (document.getElementById('score-tasks')) {
+        document.getElementById('score-tasks').textContent = `Tasks (${Math.round(componentScores.tasks)}%)`;
+    }
+    if (document.getElementById('score-finance')) {
+        document.getElementById('score-finance').textContent = `Financial Health (${Math.round(componentScores.finance)}%)`;
+    }
+    if (document.getElementById('score-fitness')) {
+        document.getElementById('score-fitness').textContent = `Fitness (${Math.round(componentScores.fitness)}%)`;
+    }
+    if (document.getElementById('score-mood')) {
+        document.getElementById('score-mood').textContent = `Mood/Stress (${Math.round(componentScores.mood)}%)`;
+    }
+
+    // 1. MOOD KPI CARD (UPDATED RENDERING)
     const moodValueElement = document.getElementById('kpi-mood-value');
     const stressElement = document.getElementById('kpi-stress-index');
+    const moodNoteElement = document.getElementById('kpi-mood-note');
+
     if (moodValueElement) moodValueElement.textContent = moodLabel;
     if (stressElement) stressElement.textContent = `Stress Index: ${stressIndex}%`;
+    if (moodNoteElement) moodNoteElement.textContent = moodNote;
 
-    // Daily Steps Card
+    // 2. FITNESS KPI CARD (UPDATED)
     const stepsValueElement = document.getElementById('kpi-steps-value');
-    if (stepsValueElement) stepsValueElement.textContent = totalStepsToday.toLocaleString();
-    
-    // Finance Card
+    const caloriesValueLabel = document.getElementById('kpi-calories-value-label');
+    const sleepValueLabel = document.getElementById('kpi-sleep-value-label');
+    const waterValueLabel = document.getElementById('kpi-water-value-label');
+
+    // FIX: Inject the clean span structure to fix duplication bug
+    if (stepsValueElement) {
+        stepsValueElement.innerHTML = `
+            <span class="kpi-steps-label">Steps: </span>
+            <span id="steps-number-val">${totalStepsToday.toLocaleString()}</span>
+        `;
+    }
+
+    if (caloriesValueLabel) caloriesValueLabel.textContent = `Calories Burned: ${totalCaloriesOutToday.toLocaleString()}`;
+    if (sleepValueLabel) sleepValueLabel.textContent = `Last Sleep: ${sleepLastNight > 0 ? sleepLastNight : '--'} hr`;
+    if (waterValueLabel) waterValueLabel.textContent = `Water Intake: ${totalWaterIntake.toLocaleString()} ml`;
+
+    // 3. FINANCE KPI CARD (UPDATED RENDERING)
     const financeValueElement = document.getElementById('kpi-finance-value');
-    const financeLabelElement = document.getElementById('kpi-finance-label');
-    if (financeValueElement) financeValueElement.textContent = `+₹${totalDueAmount.toLocaleString()}`;
-    if (financeLabelElement) financeLabelElement.textContent = `${totalBillsDue} Bill${totalBillsDue === 1 ? '' : 's'} Due`;
+    const financeHealthElement = document.getElementById('kpi-finance-health-percent');
+    const financeSubsElement = document.getElementById('kpi-finance-subs-monthly');
 
-    // --- 3. UPDATE SCHEDULE LIST ---
+    if (financeValueElement) {
+        const dueLabelHtml = `<span class="kpi-label" id="finance-due-label">Due</span>`;
+        financeValueElement.innerHTML = `₹${totalDueAmount.toLocaleString()} ${dueLabelHtml}`;
+    }
+    if (financeHealthElement) financeHealthElement.textContent = `Health: ${financialHealth}%`;
+    if (financeSubsElement) financeSubsElement.textContent = `Subscriptions: ₹${activeSubscriptionTotal.toLocaleString()} / mo`;
 
-    const scheduleList = document.getElementById('task-list-container');
-    if (scheduleList) {
-        // Sort today's tasks by completion status (incomplete first), then priority (high first)
-        scheduleItemsToday.sort((a, b) => {
-            const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
-            const priorityA = priorityOrder[a.priority] || 0;
-            const priorityB = priorityOrder[b.priority] || 0;
-            return (a.completed - b.completed) || (priorityB - priorityA);
-        });
-        
-        scheduleList.innerHTML = '';
-        if (scheduleItemsToday.filter(i => i.type === 'task').length === 0) {
-             scheduleList.innerHTML = `<li class="task-item-empty">Nothing scheduled for today.</li>`;
+    // 4. VAULT/SOCIAL HUB KPI CARD
+    const vaultLinksElement = document.getElementById('kpi-vault-links');
+    const vaultCategoriesElement = document.getElementById('kpi-vault-categories');
+    if (vaultLinksElement) vaultLinksElement.textContent = `${totalVaultLinks} Links`;
+    if (vaultCategoriesElement) vaultCategoriesElement.textContent = `${uniqueCategories} Categories`;
+
+
+    // --- 5. RENDER CHART.JS RADAR CHART (FINAL FIX) ---
+    const radarChartEl = document.getElementById('life-score-radar-chart');
+    if (radarChartEl && typeof Chart !== 'undefined') { // Ensure Chart.js is loaded
+        // Prepare data for Chart.js
+        const chartData = {
+            labels: ['Tasks (25%)', 'Financial (20%)', 'Fitness (20%)', 'Mood/Stress (20%)'],
+            datasets: [{
+                label: 'Score',
+                data: [
+                    componentScores.tasks,
+                    componentScores.finance,
+                    componentScores.fitness,
+                    componentScores.mood
+                ],
+                backgroundColor: 'rgba(0, 199, 166, 0.4)', // var(--c-primary) with alpha
+                borderColor: 'var(--c-primary)',
+                borderWidth: 1.5,
+                pointRadius: 4,
+                pointBackgroundColor: 'var(--c-primary)'
+            }]
+        };
+
+        // Destroy previous chart instance if it exists to prevent duplication error
+        if (window.lifeScoreChartInstance) {
+            window.lifeScoreChartInstance.destroy();
         }
 
-        scheduleItemsToday.filter(i => i.type === 'task').forEach(task => {
-             const li = document.createElement('li');
-             li.className = `task-item ${task.completed ? 'completed' : ''}`;
-             li.innerHTML = `
-                <input type="checkbox" id="dash-${task.id}" data-points="5" ${task.completed ? 'checked' : ''}>
-                <label for="dash-${task.id}">${task.text}</label>
-             `;
-             scheduleList.appendChild(li);
+        // Render the new chart instance
+        window.lifeScoreChartInstance = new Chart(radarChartEl, {
+            type: 'radar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(5, 3, 22, 0.1)' },
+                        grid: { color: 'rgba(5, 3, 22, 0.1)' },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            stepSize: 25,
+                            backdropColor: 'rgba(255, 255, 255, 0.8)'
+                        },
+                        pointLabels: {
+                            // CRITICAL FIX: Ensure padding is large enough to prevent cutoff
+                            padding: 20,
+                            font: { size: 12, family: 'Inter, sans-serif' },
+                            color: 'var(--c-text-dark)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true }
+                }
+            }
         });
-        
-        // Re-attach checkbox listeners for the dashboard list
+    }
+
+
+    // --- 3. UPDATE SCHEDULE LIST (Today's Schedule Card) ---
+    // ... (This section remains unchanged from previous steps) ...
+    const scheduleList = document.getElementById('task-list-container');
+    if (scheduleList) {
+        scheduleItemsToday.sort((a, b) => {
+            const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1, 'meeting': 2, 'holiday': 0 };
+            const priorityB = priorityOrder[b.priority] || 0;
+            const priorityA = priorityOrder[a.priority] || 0;
+            return (a.completed - b.completed) || (priorityB - priorityA);
+        });
+
+        const existingCheckboxes = scheduleList.querySelectorAll('input[type="checkbox"]');
+        // This function is defined inside initializeDashboardPage, cannot use here directly without refactoring
+        // existingCheckboxes.forEach(cb => cb.removeEventListener('change', updateLifeScore)); 
+
+        scheduleList.innerHTML = '';
+
+        if (scheduleItemsToday.length === 0) {
+            scheduleList.innerHTML = `<li class="task-item-empty">Nothing scheduled for today.</li>`;
+        }
+
+        scheduleItemsToday.forEach(item => {
+            const isTask = item.type === 'task' || item.type === undefined;
+            const li = document.createElement('li');
+            li.className = `task-item ${item.completed ? 'completed' : ''}`;
+
+            const inputOrIcon = isTask
+                ? `<input type="checkbox" id="dash-${item.id}" ${item.completed ? 'checked' : ''}>`
+                : `<i data-feather="${item.type === 'meeting' ? 'users' : 'gift'}" style="width: 20px; height: 20px; color: var(--c-text-muted);"></i>`;
+
+            const labelText = isTask ? item.text : `${item.text} (${item.type})`;
+
+            li.innerHTML = `
+                ${inputOrIcon}
+                <label for="dash-${item.id}" style="margin-left: ${isTask ? '12px' : '10px'};">${labelText}</label>
+             `;
+            scheduleList.appendChild(li);
+        });
+
+        // The checkbox listener needs the updateLifeScore function from initializeDashboardPage's scope,
+        // so this listener setup usually requires the logic to be moved or simplified.
+        // For now, the implementation relies on the function being defined/passed in initialization.
         scheduleList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
-                const isChecked = checkbox.checked;
-                const taskId = checkbox.id.replace('dash-', '');
+                const isChecked = e.target.checked;
+                const taskId = e.target.id.replace('dash-', '');
                 const task = taskState.find(t => t.id === taskId);
+
                 if (task) {
                     task.completed = isChecked;
-                    // Re-render dashboard and task page (if calendar is present)
+                    const scoreChange = isChecked ? 3 : -3;
+                    // The function call below relies on the outer scope of initializeDashboardPage
+                    // updateLifeScore(scoreChange); 
+
                     renderDashboardMetrics();
-                    // If the Tasks page is initialized, re-render it for consistency
-                    if (document.getElementById('main-task-list')) {
-                        initializeTasksPageLogic();
-                    }
                 }
             });
         });
+    }
+
+
+    // --- 4. UPDATE AI REMEDIES LIST & Tasks (Actions for Today Card) ---
+    const remedyList = document.getElementById('dashboard-actions-list');
+    if (remedyList) {
+        let actionItems = [];
+
+        // A. Critical AI Remediation Alerts (Top Priority)
+        if (overdueBill) {
+            actionItems.push({
+                id: `remedy-bill-${overdueBill.id}`,
+                status: 'finance',
+                icon: 'alert-triangle',
+                text: `Overdue: ${overdueBill.name}. Pay Now.`,
+                buttonText: 'Pay',
+                action: 'pay',
+                dataId: overdueBill.id,
+                priorityScore: 10
+            });
+        }
+        if (isLowSleep) {
+            actionItems.push({
+                id: 'remedy-low-sleep',
+                status: 'health',
+                icon: 'moon',
+                text: `Low Sleep detected (${sleepLastNight}h). Schedule a 30-min break.`,
+                buttonText: 'Schedule',
+                action: 'schedule',
+                priorityScore: 9
+            });
+        }
+        if (isHighStress && !isLowSleep && !overdueBill) {
+            actionItems.push({
+                id: 'remedy-high-stress',
+                status: 'health',
+                icon: 'zap',
+                text: `High Stress Index (${stressIndex}%). Consider a 5-min meditation.`,
+                buttonText: 'Start',
+                action: 'meditate',
+                priorityScore: 8
+            });
+        }
+
+
+        // B. All Pending Tasks Due Today (Lower Priority)
+        const pendingTasksToday = scheduleItemsToday.filter(
+            item => item.type === 'task' && !item.completed
+        );
+
+        pendingTasksToday.forEach(task => {
+            actionItems.push({
+                id: `task-action-${task.id}`,
+                status: 'task',
+                icon: 'check-square',
+                text: `Task: ${task.text} (${task.priority}).`,
+                buttonText: 'Complete',
+                action: 'complete-task',
+                dataId: task.id,
+                priorityScore: task.priority === 'high' ? 7 : (task.priority === 'medium' ? 6 : 5)
+            });
+        });
+
+        actionItems.sort((a, b) => b.priorityScore - a.priorityScore);
+
+
+        let finalHTML = '';
+        if (actionItems.length === 0) {
+            finalHTML = `<li class="remedy-item" data-status="info"><i data-feather="thumbs-up"></i><p>You're all set! No critical actions or tasks due today.</p></li>`;
+        } else {
+            actionItems.forEach(item => {
+                const isCompleted = item.action === 'pay' && billState.find(b => b.id === item.dataId && b.paid);
+
+                finalHTML += `
+                    <li class="remedy-item ${isCompleted ? 'completed' : ''}" 
+                        data-status="${item.status}" data-action-type="${item.action}" data-id="${item.dataId}">
+                        <i data-feather="${item.icon}"></i>
+                        <p>${item.text}</p>
+                        <button class="remedy-button" data-action="${item.action}" data-id="${item.dataId}" 
+                            ${isCompleted ? 'disabled' : ''}>
+                            ${isCompleted ? 'Paid' : item.buttonText}
+                        </button>
+                    </li>
+                `;
+            });
+        }
+
+        remedyList.innerHTML = finalHTML;
     }
 
     feather.replace();
@@ -354,66 +648,116 @@ function renderDashboardMetrics() {
  * Runs all logic for the Dashboard (index.html)
  */
 function initializeDashboardPage() {
+
     const lifeScoreElement = document.getElementById('life-score-number');
     const notificationPanel = document.getElementById('notification-panel');
-    
-    // Check global state for notifications banner (Dashboard only)
-    if (notificationPanel) {
-        const overdueBill = billState.some(b => b.overdue && !b.paid);
-        const highStress = moodHistory.length > 0 && moodHistory[moodHistory.length - 1].stress >= 70;
-        
-        if (overdueBill || highStress) {
-            notificationPanel.style.display = 'flex'; 
-            notificationPanel.style.alignItems = 'center';
-            const messageParts = [];
-            if(overdueBill) messageParts.push('Overdue Bill');
-            if(highStress) messageParts.push('High Stress');
-            document.getElementById('notification-message').textContent = `You have ${messageParts.join(' & ')} critical alert(s).`;
-        } else {
-            notificationPanel.style.display = 'none';
-        }
-    }
-    
-    // Function to update the Life Score dynamically (used by remedies/tasks)
+
+    // Function to update the Life Score dynamically (made local to this function)
     function updateLifeScore(points) {
-        if (!lifeScoreElement) return; 
+        if (!lifeScoreElement) return;
         let currentScore = parseInt(lifeScoreElement.textContent) || 82;
         currentScore = Math.max(0, Math.min(100, currentScore + points));
         lifeScoreElement.textContent = currentScore;
         lifeScoreElement.classList.add('pop');
         setTimeout(() => lifeScoreElement.classList.remove('pop'), 300);
     }
-    
-    // Handle Mock Remedy Button Clicks on the Dashboard (e.g., Pay, Schedule)
-    const remedyButtons = document.querySelectorAll('.ai-remedies .remedy-button');
-    remedyButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const remedyItem = button.closest('.remedy-item');
-            const action = button.textContent.trim();
-            const status = remedyItem.dataset.status;
 
-            if (status === 'finance' && action === 'Pay') {
-                const overdueBill = billState.find(b => b.overdue && !b.paid);
-                if (overdueBill) {
-                     overdueBill.paid = true;
-                     overdueBill.overdue = false;
-                     showFlashMessage(`Bill paid (Mock). Life Score +3.`, 'check-circle');
-                     updateLifeScore(3);
-                }
-            } else if (status === 'health' && action === 'Schedule') {
-                showFlashMessage(`30-min break scheduled. Stress Index reduced.`, 'coffee');
-                updateLifeScore(2);
-            }
-            
-            button.textContent = 'Done';
-            button.disabled = true;
-            if (remedyItem) remedyItem.classList.add('completed');
-            
-            renderDashboardMetrics();
+    // Check global state for notifications banner (Dashboard only)
+    if (notificationPanel) {
+        const overdueBill = billState.some(b => b.overdue && !b.paid);
+        const highStress = moodHistory.length > 0 && moodHistory[moodHistory.length - 1].stress >= 70;
+
+        if (overdueBill || highStress) {
+            notificationPanel.style.display = 'flex';
+            notificationPanel.style.alignItems = 'center';
+            const messageParts = [];
+            if (overdueBill) messageParts.push('Overdue Bill');
+            if (highStress) messageParts.push('High Stress');
+            document.getElementById('notification-message').textContent = `You have ${messageParts.join(' & ')} critical alert(s).`;
+        } else {
+            notificationPanel.style.display = 'none';
+        }
+    }
+
+    // Handle Mock Remedy Button Clicks on the Dashboard (e.g., Pay, Schedule, Meditate)
+    const remedyList = document.getElementById('dashboard-actions-list');
+
+    function attachRemedyListeners() {
+        // IMPORTANT: Need to re-select and re-attach listeners every time the list is re-rendered
+        const remedyButtons = remedyList.querySelectorAll('.remedy-button');
+
+        // Remove old listeners by cloning and replacing the element
+        remedyButtons.forEach(button => {
+            button.replaceWith(button.cloneNode(true));
         });
-    });
-    
+
+        // Re-select the cloned buttons
+        const liveRemedyButtons = remedyList.querySelectorAll('.remedy-button');
+
+        liveRemedyButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const action = e.currentTarget.dataset.action;
+                const itemId = e.currentTarget.dataset.id;
+                const remedyItem = e.currentTarget.closest('.remedy-item');
+
+                // If button is already disabled (e.g., set to 'Paid' in the HTML), do nothing
+                if (e.currentTarget.disabled) return;
+
+                if (action === 'pay') {
+                    const overdueBill = billState.find(b => b.id === itemId);
+                    if (overdueBill) {
+                        // ... (unchanged logic for updating billState and adding next bill) ...
+                        overdueBill.paid = true;
+                        overdueBill.overdue = false;
+
+                        if (overdueBill.frequency !== 'one-time') {
+                            const nextDueDate = calculateNextDueDate(overdueBill.dueDate, overdueBill.frequency);
+                            billState.push({
+                                ...overdueBill,
+                                id: 'bill' + Date.now(),
+                                dueDate: nextDueDate,
+                                paid: false,
+                                overdue: false
+                            });
+                        }
+                        showFlashMessage(`Bill paid (Mock). Life Score +3.`, 'check-circle');
+                        updateLifeScore(3);
+                    }
+                    e.currentTarget.textContent = 'Paid'; // Set button text immediately
+                } else if (action === 'schedule') {
+                    // ... (unchanged health logic) ...
+                    showFlashMessage(`30-min break scheduled. Stress Index reduced.`, 'coffee');
+                    updateLifeScore(2);
+                    e.currentTarget.textContent = 'Scheduled';
+                } else if (action === 'meditate') {
+                    // ... (unchanged health logic) ...
+                    showFlashMessage(`5-min meditation started (Mock). Stress reduced.`, 'zap');
+                    updateLifeScore(2);
+                    e.currentTarget.textContent = 'Done'; // "Done" is fine for single-use remedy
+                } else if (action === 'complete-task') {
+                    const task = taskState.find(t => t.id === itemId);
+                    if (task) {
+                        task.completed = true;
+                        showFlashMessage(`Task completed: ${task.text}!`, 'check-circle');
+                        updateLifeScore(3);
+                    }
+                    e.currentTarget.textContent = 'Done'; // Set button text immediately
+                }
+
+                // CRITICAL FIX: Mute the item visually using CSS class and disable the button.
+                e.currentTarget.disabled = true;
+                if (remedyItem) remedyItem.classList.add('completed');
+
+                // Re-render the whole dashboard to reflect changes
+                renderDashboardMetrics();
+                attachRemedyListeners();
+            });
+        });
+    }
+
+    // Initial render and setup
     renderDashboardMetrics();
+    attachRemedyListeners();
     feather.replace();
 }
 
@@ -426,22 +770,22 @@ function initializeDashboardPage() {
  * Runs all logic for the Tasks Page (tasks.html)
  */
 function initializeTasksPageLogic() {
-    
+
     // --- 1. STATE MANAGEMENT (Uses Global taskState) ---
-    let activeTaskFilter = 'date'; 
+    let activeTaskFilter = 'date';
     const mainTaskList = document.getElementById('main-task-list');
 
     // --- 2. CORE RENDER FUNCTION ---
     function renderTaskList() {
         if (!mainTaskList) return;
-        
+
         // 1. FILTERING STEP
         let displayTasks = taskState.filter(task => {
             if (task.type !== 'task' && task.type !== undefined) return false;
 
             if (activeTaskFilter === 'completed') {
                 return task.completed;
-            } 
+            }
             return true;
         });
 
@@ -450,7 +794,7 @@ function initializeTasksPageLogic() {
             const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
             const priorityA = priorityOrder[a.priority] || 0;
             const priorityB = priorityOrder[b.priority] || 0;
-            
+
             if (activeTaskFilter !== 'completed' && a.completed !== b.completed) {
                 return a.completed ? 1 : -1;
             }
@@ -463,26 +807,26 @@ function initializeTasksPageLogic() {
             const dateB = b.date ? new Date(b.date).getTime() : Infinity;
 
             if (dateA !== dateB) {
-                return dateA - dateB; 
+                return dateA - dateB;
             }
-            
+
             return priorityB - priorityA;
         });
         // -------------------------------------------------------
 
-        mainTaskList.innerHTML = ''; 
+        mainTaskList.innerHTML = '';
         if (displayTasks.length === 0) {
-            const message = activeTaskFilter === 'completed' ? 
-                'No completed tasks yet. Keep going!' : 
+            const message = activeTaskFilter === 'completed' ?
+                'No completed tasks yet. Keep going!' :
                 'No active tasks. Add one!';
             mainTaskList.innerHTML = `<li class="task-item-empty">${message}</li>`;
         }
-        
+
         displayTasks.forEach(task => {
             const li = document.createElement('li');
             li.className = `task-item ${task.completed ? 'completed' : ''}`;
             li.dataset.id = task.id;
-            
+
             let formattedDate = '';
             if (task.date) {
                 try {
@@ -508,14 +852,14 @@ function initializeTasksPageLogic() {
             `;
             mainTaskList.appendChild(li);
         });
-        
+
         mainTaskList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
                 const taskId = e.target.closest('.task-item').dataset.id;
                 toggleTaskCompleted(taskId);
             });
         });
-        
+
         mainTaskList.querySelectorAll('.edit-task-button').forEach(button => {
             button.addEventListener('click', (e) => {
                 openEditModal(e.currentTarget.dataset.id);
@@ -529,7 +873,7 @@ function initializeTasksPageLogic() {
                 }
             });
         });
-        
+
         if (calendar) {
             calendar.refetchEvents();
         }
@@ -541,17 +885,17 @@ function initializeTasksPageLogic() {
         const task = taskState.find(t => t.id === taskId);
         if (task) {
             task.completed = !task.completed;
-            
+
             if (task.completed && typeof showFlashMessage === 'function') {
-                 showFlashMessage(`Task completed: ${task.text}! Well done.`, 'check-circle');
+                showFlashMessage(`Task completed: ${task.text}! Well done.`, 'check-circle');
             }
         }
         renderTaskList();
         if (document.getElementById('dashboard-grid')) {
-             renderDashboardMetrics();
+            renderDashboardMetrics();
         }
     }
-    
+
     function deleteTask(taskId) {
         taskState = taskState.filter(t => t.id !== taskId);
         renderTaskList();
@@ -559,7 +903,7 @@ function initializeTasksPageLogic() {
             showFlashMessage(`Task deleted successfully.`, 'trash-2');
         }
         if (document.getElementById('dashboard-grid')) {
-             renderDashboardMetrics();
+            renderDashboardMetrics();
         }
     }
 
@@ -570,31 +914,31 @@ function initializeTasksPageLogic() {
     const taskTextInput = document.getElementById('task-text-input');
     const taskPrioritySelect = document.getElementById('task-priority-select');
     const taskDateInput = document.getElementById('task-date-input');
-    
-    if(taskDateInput) {
-        taskDateInput.value = getTodayDateString(); 
+
+    if (taskDateInput) {
+        taskDateInput.value = getTodayDateString();
     }
 
-    function showAddModal() { 
-        if(taskDateInput) {
-            taskDateInput.value = getTodayDateString(); 
+    function showAddModal() {
+        if (taskDateInput) {
+            taskDateInput.value = getTodayDateString();
         }
-        if (addModal) addModal.style.display = 'flex'; 
+        if (addModal) addModal.style.display = 'flex';
     }
     function hideAddModal() {
         if (addModal) addModal.style.display = 'none';
-        if(taskTextInput) taskTextInput.value = '';
-        if(taskPrioritySelect) taskPrioritySelect.value = 'medium';
+        if (taskTextInput) taskTextInput.value = '';
+        if (taskPrioritySelect) taskPrioritySelect.value = 'medium';
     }
 
     const mainAddTaskButton = document.getElementById('add-task-button-main');
     if (mainAddTaskButton) mainAddTaskButton.addEventListener('click', showAddModal);
-    
+
     if (modalCancelButton) modalCancelButton.addEventListener('click', hideAddModal);
     if (addModal) addModal.addEventListener('click', (e) => {
         if (e.target === addModal) hideAddModal();
     });
-    
+
     if (modalAddButton) {
         modalAddButton.addEventListener('click', () => {
             const taskText = taskTextInput.value;
@@ -602,7 +946,7 @@ function initializeTasksPageLogic() {
                 alert('Please enter a task description.');
                 return;
             }
-            
+
             const newTask = {
                 id: 'task' + (taskState.length + 1 + Math.random()),
                 text: taskText.trim(),
@@ -611,15 +955,15 @@ function initializeTasksPageLogic() {
                 completed: false,
                 type: 'task'
             };
-            
+
             taskState.push(newTask);
-            renderTaskList(); 
+            renderTaskList();
             hideAddModal();
             if (typeof showFlashMessage === 'function') {
-                 showFlashMessage(`Task added: ${newTask.text}`, 'plus-circle');
+                showFlashMessage(`Task added: ${newTask.text}`, 'plus-circle');
             }
             if (document.getElementById('dashboard-grid')) {
-                 renderDashboardMetrics();
+                renderDashboardMetrics();
             }
         });
     }
@@ -642,7 +986,7 @@ function initializeTasksPageLogic() {
     const editModalCancelButton = document.getElementById('edit-modal-cancel-button');
     const editModalSaveButton = document.getElementById('edit-modal-save-button');
     const editModalDeleteButton = document.getElementById('edit-modal-delete-button');
-    
+
     const editTaskIdInput = document.getElementById('edit-task-id-input');
     const editTaskTextInput = document.getElementById('edit-task-text-input');
     const editTaskPrioritySelect = document.getElementById('edit-task-priority-select');
@@ -656,48 +1000,48 @@ function initializeTasksPageLogic() {
         editTaskTextInput.value = task.text;
         editTaskPrioritySelect.value = task.priority;
         editTaskDateInput.value = task.date;
-        
+
         document.getElementById('edit-modal-title').textContent = `Edit: ${task.text}`;
-        
+
         editModal.style.display = 'flex';
     }
 
     function hideEditModal() {
         if (editModal) editModal.style.display = 'none';
     }
-    
+
     if (editModalCancelButton) editModalCancelButton.addEventListener('click', hideEditModal);
     if (editModal) editModal.addEventListener('click', (e) => {
         if (e.target === editModal) hideEditModal();
     });
-    
+
     if (editModalSaveButton) {
         editModalSaveButton.addEventListener('click', () => {
             const taskId = editTaskIdInput.value;
             const task = taskState.find(t => t.id === taskId);
-            
+
             if (task) {
                 task.text = editTaskTextInput.value;
                 task.priority = editTaskPrioritySelect.value;
                 task.date = editTaskDateInput.value;
-                
+
                 renderTaskList();
                 hideEditModal();
                 if (typeof showFlashMessage === 'function') {
                     showFlashMessage(`Task updated: ${task.text}`, 'save');
                 }
                 if (document.getElementById('dashboard-grid')) {
-                     renderDashboardMetrics();
+                    renderDashboardMetrics();
                 }
             }
         });
     }
-    
+
     if (editModalDeleteButton) {
         editModalDeleteButton.addEventListener('click', () => {
-             const taskId = editTaskIdInput.value;
-             deleteTask(taskId);
-             hideEditModal();
+            const taskId = editTaskIdInput.value;
+            deleteTask(taskId);
+            hideEditModal();
         });
     }
 
@@ -706,15 +1050,15 @@ function initializeTasksPageLogic() {
     const deleteTaskConfirmButton = document.getElementById('delete-task-confirm-button');
     const deleteTaskCancelButton = document.getElementById('delete-task-cancel-button');
     const deleteTaskConfirmMessage = document.getElementById('delete-task-confirm-message');
-    
+
     function showDeleteConfirmModal(id, name) {
         taskToDeleteId = id;
-        if(deleteTaskConfirmMessage) deleteTaskConfirmMessage.textContent = `Are you sure you want to delete the task: "${name}"? This action cannot be undone.`;
-        if(deleteTaskConfirmModal) deleteTaskConfirmModal.style.display = 'flex';
+        if (deleteTaskConfirmMessage) deleteTaskConfirmMessage.textContent = `Are you sure you want to delete the task: "${name}"? This action cannot be undone.`;
+        if (deleteTaskConfirmModal) deleteTaskConfirmModal.style.display = 'flex';
     }
-    
+
     function hideDeleteConfirmModal() {
-        if(deleteTaskConfirmModal) deleteTaskConfirmModal.style.display = 'none';
+        if (deleteTaskConfirmModal) deleteTaskConfirmModal.style.display = 'none';
         taskToDeleteId = null;
     }
 
@@ -730,7 +1074,7 @@ function initializeTasksPageLogic() {
     if (deleteTaskCancelButton) {
         deleteTaskCancelButton.addEventListener('click', hideDeleteConfirmModal);
     }
-    
+
     if (deleteTaskConfirmModal) deleteTaskConfirmModal.addEventListener('click', (e) => {
         if (e.target === deleteTaskConfirmModal) hideDeleteConfirmModal();
     });
@@ -745,28 +1089,28 @@ function initializeTasksPageLogic() {
     function showDayTasks(date) {
         const tasksForDay = taskState.filter(item => item.date === date);
         const dateObj = new Date(date + 'T00:00:00');
-        if(dayTasksTitle) {
+        if (dayTasksTitle) {
             dayTasksTitle.textContent = `Schedule for ${dateObj.toLocaleString('en-US', { month: 'long', day: 'numeric' })}`;
         }
 
-        if(dayTasksList) {
+        if (dayTasksList) {
             tasksForDay.sort((a, b) => {
-                 const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1, 'meeting': 2, 'holiday': 0 };
-                 return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0); 
+                const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1, 'meeting': 2, 'holiday': 0 };
+                return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
             });
 
             dayTasksList.innerHTML = '';
             if (tasksForDay.length === 0) {
                 dayTasksList.innerHTML = '<li class="task-item-empty">No schedule items for this day.</li>';
             }
-            
+
             tasksForDay.forEach(item => {
                 const isTask = item.type === 'task' || item.type === undefined;
                 const status = isTask ? (item.completed ? 'completed' : 'pending') : item.type;
-                
+
                 const li = document.createElement('li');
                 li.className = `task-item ${status}`;
-                
+
                 let icon = 'check-square';
                 let tagText = item.priority;
                 let colorClass = item.priority;
@@ -788,96 +1132,50 @@ function initializeTasksPageLogic() {
             });
             feather.replace();
         }
-        
+
         if (dayTasksModal) dayTasksModal.style.display = 'flex';
     }
-    
+
     function hideDayTasks() {
         if (dayTasksModal) dayTasksModal.style.display = 'none';
     }
-    
+
     if (dayTasksCloseButton) dayTasksCloseButton.addEventListener('click', hideDayTasks);
     if (dayTasksModal) dayTasksModal.addEventListener('click', (e) => {
         if (e.target === dayTasksModal) hideDayTasks();
     });
-    
-    
+
+
     // --- 5. INITIAL RENDER ---
-    renderTaskList(); 
-    
-    // --- 6. SEPARATE CALENDAR INITIALIZATION (Unchanged) ---
-    const signInButton = document.getElementById('google-signin-button');
+    renderTaskList();
+
+    // --- 6. CLERK/CALENDAR INITIALIZATION ---
+    const signInButton = document.getElementById('clerk-signin-button'); // RENAMED ID
     const overlay = document.getElementById('google-signin-overlay');
 
     if (signInButton) {
         signInButton.addEventListener('click', () => {
-            IS_GOOGLE_SIGNED_IN = true;
+            IS_CLERK_SIGNED_IN = true; // CHANGED STATE
             if (overlay) overlay.style.display = 'none';
-            
+
+            // Simulating API call/redirect completion
             setTimeout(() => {
                 if (typeof showFlashMessage === 'function') {
-                    showFlashMessage("Google Calendar Synced! Events now visible.", 'check-circle');
+                    showFlashMessage("Clerk Sign-In Successful! Calendar Sync Activated.", 'check-circle');
                 }
                 tryInitializeCalendar();
             }, 500);
         });
     }
 
-    if (IS_GOOGLE_SIGNED_IN) {
+    // CHECKING NEW STATE
+    if (IS_CLERK_SIGNED_IN) {
         if (overlay) overlay.style.display = 'none';
         tryInitializeCalendar();
     } else {
         const calendarEl = document.getElementById('calendar');
         if (calendarEl) calendarEl.innerHTML = '';
     }
-
-
-    function tryInitializeCalendar() {
-        if (typeof FullCalendar === 'undefined' || !document.getElementById('calendar')) {
-            setTimeout(tryInitializeCalendar, 100); 
-            return;
-        }
-        
-        const calendarEl = document.getElementById('calendar');
-        if (calendarEl) {
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                height: '100%',
-                headerToolbar: {
-                    left: 'prev',
-                    center: 'title',
-                    right: 'next today'
-                },
-                
-                dateClick: function(info) {
-                    showDayTasks(info.dateStr); 
-                },
-                
-                events: function(fetchInfo, successCallback, failureCallback) {
-                    const calendarEvents = taskState
-                        .filter(item => !item.completed) 
-                        .map(item => {
-                            let className = item.priority;
-                            if (item.type === 'meeting') {
-                                className = 'medium meeting';
-                            } else if (item.type === 'holiday') {
-                                className = 'low holiday';
-                            }
-                            
-                            return {
-                                title: item.text,
-                                start: item.date,
-                                className: className
-                            };
-                        });
-                    successCallback(calendarEvents);
-                }
-            });
-            
-            calendar.render();
-            calendar.refetchEvents();
-        }
-    } 
 }
 
 /**
@@ -889,19 +1187,19 @@ function initializeFitnessPage() {
     const TODAY_DATE = getTodayDateString();
 
     // --- 2. STATE MANAGEMENT (Uses Global fitnessHistory and completedSuggestions) ---
-    let selectedWaterVolume = 0; 
-    
+    let selectedWaterVolume = 0;
+
     const kpiSteps = document.getElementById('kpi-steps');
     const kpiCaloriesOut = document.getElementById('kpi-calories-out');
     const kpiWorkouts = document.getElementById('kpi-workouts');
-    const kpiWater = document.getElementById('kpi-water'); 
+    const kpiWater = document.getElementById('kpi-water');
     const kpiSleep = document.getElementById('kpi-sleep');
     const suggestionList = document.getElementById('health-suggestion-list');
 
     // Modals & Inputs
     const logActivityModal = document.getElementById('log-activity-modal');
-    const logWaterModal = document.getElementById('log-water-modal'); 
-    const logWaterButton = document.getElementById('log-water-button'); 
+    const logWaterModal = document.getElementById('log-water-modal');
+    const logWaterButton = document.getElementById('log-water-button');
     const waterModalCancelButton = document.getElementById('water-modal-cancel-button');
     const waterModalLogButton = document.getElementById('water-modal-log-button');
     const waterQuickSelect = document.getElementById('water-quick-select');
@@ -1032,7 +1330,7 @@ function initializeFitnessPage() {
     }
 
     // --- 4. MODAL & LOGIC HANDLERS ---
-    
+
     // Manual Entry Modal Handlers
     function updateActivityUnit() {
         if (!activityTypeSelect || !activityValueInput || !activityUnitLabel || !activityValueLabel) return;
@@ -1107,7 +1405,7 @@ function initializeFitnessPage() {
         showFlashMessage(`Logged ${volume} ml of water! Staying hydrated.`);
         renderFitnessPage();
         if (document.getElementById('dashboard-grid')) {
-             renderDashboardMetrics();
+            renderDashboardMetrics();
         }
     }
 
@@ -1213,7 +1511,7 @@ function initializeFitnessPage() {
             showFlashMessage(`Logged ${value.toLocaleString()} ${unit} for ${type}.`);
             renderFitnessPage();
             if (document.getElementById('dashboard-grid')) {
-                 renderDashboardMetrics();
+                renderDashboardMetrics();
             }
         });
     }
@@ -1253,18 +1551,18 @@ function initializeFitnessPage() {
  * Runs all logic for the Mood Page (mood.html)
  */
 function initializeMoodPage() {
-    
+
     // --- 1. STATE MANAGEMENT (Uses Global moodHistory) ---
     const TODAY_DATE = getTodayDateString();
     const COOLDOWN_DURATION = 3600000; // 1 hour in milliseconds
-    
+
     // NEW STATE: Daily log counter and last used timestamps
     let remedyLog = {
         date: TODAY_DATE,
         breakCount: 0,
         readCount: 0,
-        lastBreakTime: 0, 
-        lastReadTime: 0   
+        lastBreakTime: 0,
+        lastReadTime: 0
     };
 
     const stressIndexValue = document.getElementById('stress-index-value');
@@ -1473,7 +1771,7 @@ function initializeMoodPage() {
 
         feather.replace();
         if (document.getElementById('dashboard-grid')) {
-             renderDashboardMetrics();
+            renderDashboardMetrics();
         }
     }
 
@@ -1586,7 +1884,7 @@ function initializeMoodPage() {
     renderMoodPage();
 
     function checkTimeAndRender() {
-        if (activeTimer) return; 
+        if (activeTimer) return;
 
         const now = new Date();
         const hour = now.getHours();
@@ -1595,7 +1893,7 @@ function initializeMoodPage() {
         // 1. Check if button should be unlocked/locked
         if (!moodHistory.some(entry => entry.date === getTodayDateString() && entry.isFinal)) {
             if (hour > LOG_TIME_HOUR || (hour === LOG_TIME_HOUR && minute >= LOG_TIME_MINUTE) || hour < 1) {
-                renderMoodPage(); 
+                renderMoodPage();
             }
         }
         // 2. Check if a cooldown period ended and needs a re-render
@@ -1610,18 +1908,18 @@ function initializeMoodPage() {
 
         // 3. Reset daily status check at midnight
         if (hour < 1) {
-            renderMoodPage(); 
+            renderMoodPage();
         }
     }
 
-    setInterval(checkTimeAndRender, 60000); 
+    setInterval(checkTimeAndRender, 60000);
 }
 
 /**
  * Runs all logic for the Social Hub (vault.html) - REVISED FOR TASK SCHEDULER & DELETE FIX
  */
 function initializeVaultPage() {
-    
+
     // --- 1. STATE MANAGEMENT (Source of Truth) ---
     let assetState = [
         { id: 'v1', name: 'Instagram Profile', type: 'Social', icon: 'instagram', url: 'https://instagram.com/kuberbassi' },
@@ -1997,11 +2295,11 @@ function initializeVaultPage() {
 function initializeFinancePage() {
 
     // --- Global State Variables ---
-    let activeBillFilter = 'upcoming'; 
-    let showAllBills = false; 
-    const MAX_BILLS_TO_SHOW = 3; 
-    const EARLY_PAYMENT_WINDOW = 3; 
-    
+    let activeBillFilter = 'upcoming';
+    let showAllBills = false;
+    const MAX_BILLS_TO_SHOW = 3;
+    const EARLY_PAYMENT_WINDOW = 3;
+
     // Helper to calculate the next recurring date (Automation Core)
     function calculateNextDueDate(currentDueDate, frequency) {
         if (frequency === 'one-time') return null;
@@ -2251,7 +2549,7 @@ function initializeFinancePage() {
         addBillActionListeners();
         feather.replace();
         if (document.getElementById('dashboard-grid')) {
-             renderDashboardMetrics();
+            renderDashboardMetrics();
         }
     }
 
@@ -2823,7 +3121,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (bellWrapper) {
         bellWrapper.addEventListener('click', (event) => {
-            event.stopPropagation(); 
+            event.stopPropagation();
             toggleNotificationPanel();
         });
     }
@@ -2835,6 +3133,9 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleNotificationPanel();
         }
     });
+
+    // --- 3. Global Profile Update (NEW) ---
+    updateUserProfileUI();
 
     // --- 5. Page-Specific Logic Router ---
     switch (currentPage) {

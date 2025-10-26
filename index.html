@@ -8,6 +8,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -27,7 +28,7 @@
         </ul>
 
         <div class="sidebar-footer">
-            <li class="menu-item" data-page="settings.html"="Settings"><i data-feather="settings"></i></li>
+            <li class="menu-item" data-page="settings.html" title="Settings"><i data-feather="settings"></i></li>
         </div>
     </nav>
 
@@ -40,15 +41,16 @@
                     src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic">
             </div>
         </header>
+
         <div id="global-notification-panel"></div>
-        
+
         <div id="notification-panel"
-            style="display: none; padding: 15px; border-radius: 12px; background: #fff8e1; border: 1px solid #ffecb3; color: #ff9800; font-weight: 500; margin-bottom: 20px;">
+            style="display: none; padding: 15px; border-radius: 12px; background: #fff8e1; border: 1px solid #ffecb3; color: #ff9800; font-weight: 500; margin-bottom: 20px; display: flex; align-items: center;">
             <i data-feather="bell" style="width: 18px; height: 18px; margin-right: 8px;"></i>
-            <span id="notification-message">You have 2 critical alerts (Overdue Bill, High Stress).</span>
+            <span id="notification-message"></span>
         </div>
 
-        <section class="dashboard-grid">
+        <section class="dashboard-grid" id="dashboard-grid">
 
             <div class="card life-score">
                 <div class="card-header">
@@ -56,81 +58,67 @@
                     <span class="card-metric" id="life-score-number">82</span>
                 </div>
                 <div class="life-score-content">
-                    <div class="radar-chart-placeholder chart-visual">
-                        <i data-feather="hexagon"></i>
-                        <span>Radar Chart</span>
+                    <div class="chart-container">
+                        <canvas id="life-score-radar-chart"></canvas>
                     </div>
                     <ul class="score-weights">
-                        <li>Tasks (25%)</li>
-                        <li>Financial Health (20%)</li>
-                        <li>Fitness (20%)</li>
-                        <li>Mood/Stress (20%)</li>
-                        <li>Digital Org (15%)</li>
+                        <li id="score-tasks">Tasks (25%)</li>
+                        <li id="score-finance">Financial Health (20%)</li>
+                        <li id="score-fitness">Fitness (20%)</li>
+                        <li id="score-mood">Mood/Stress (20%)</li>
+                        <li id="score-digital">Digital Org (15%)</li>
                     </ul>
                 </div>
             </div>
 
             <div class="card ai-remedies">
                 <h3>Actions for Today</h3>
-                <ul class="remedy-list">
-                    <li class="remedy-item" data-status="finance"><i data-feather="alert-triangle"></i>
-                        <p>Overdue: Netflix Bill. Pay Now.</p><button class="remedy-button">Pay</button>
-                    </li>
-                    <li class="remedy-item" data-status="health"><i data-feather="moon"></i>
-                        <p>Low Sleep detected. Schedule a 30-min break.</p><button
-                            class="remedy-button">Schedule</button>
-                    </li>
+                <ul class="remedy-list" id="dashboard-actions-list">
                 </ul>
             </div>
 
             <div class="card tasks-schedule">
                 <h3>Today's Schedule</h3>
                 <ul class="task-list" id="task-list-container">
-                    <li class="task-item">
-                        <input type="checkbox" id="task1" data-points="5">
-                        <label for="task1">Finalize project report</label>
-                    </li>
-                    <li class="task-item">
-                        <input type="checkbox" id="task2" data-points="2">
-                        <label for="task2">Call with team</label>
-                    </li>
-                    <li class="task-item">
-                        <input type="checkbox" id="task3" data-points="3">
-                        <label for="task3">Pay electricity bill</label>
-                    </li>
                 </ul>
             </div>
 
             <div class="card kpi-card">
                 <div class="card-header">
-                    <h3>Mood</h3><i data-feather="smile"></i>
+                    <h3>Mood Snapshot</h3><i data-feather="smile"></i>
                 </div>
-                <p class="kpi-value">Happy</p>
-                <p class="kpi-label">Stress Index: 45%</p>
+                <p class="kpi-value" id="kpi-mood-value">Neutral</p>
+                <p class="kpi-label" id="kpi-stress-index">Stress Index: 45%</p>
+                <p class="kpi-label" id="kpi-mood-note"
+                    style="font-size: 14px; margin-top: 10px; color: var(--c-text-muted); font-style: italic; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                    Daily check-in placeholder.</p>
             </div>
 
             <div class="card kpi-card">
                 <div class="card-header">
-                    <h3>Daily Steps</h3><i data-feather="trending-up"></i>
+                    <h3>Health Today</h3><i data-feather="heart"></i>
                 </div>
-                <p class="kpi-value">5,000</p>
-                <p class="kpi-label">7-day trend</p>
+                <p class="kpi-value" id="kpi-steps-value"></p>
+                <p class="kpi-label" id="kpi-calories-value-label">Calories Burned: 300</p>
+                <p class="kpi-label" id="kpi-sleep-value-label">Last Sleep: 5.5 hr</p>
+                <p class="kpi-label" id="kpi-water-value-label">Water Intake: 0 ml</p>
             </div>
 
             <div class="card kpi-card">
                 <div class="card-header">
-                    <h3>Finance</h3><i data-feather="credit-card"></i>
+                    <h3>Finance Health</h3><i data-feather="credit-card"></i>
                 </div>
-                <p class="kpi-value">+₹21,000</p>
-                <p class="kpi-label">3 Bills Due</p>
+                <p class="kpi-value" id="kpi-finance-value">₹0</p>
+                <p class="kpi-label" id="kpi-finance-health-percent">Health: 25%</p>
+                <p class="kpi-label" id="kpi-finance-subs-monthly">Subscriptions: ₹3,500 / mo</p>
             </div>
 
             <div class="card kpi-card digital-assets">
                 <div class="card-header">
-                    <h3>Digital Assets</h3><i data-feather="lock"></i>
+                    <h3>Social Hub</h3><i data-feather="lock"></i>
                 </div>
-                <p class="kpi-value">Secured</p>
-                <p class="kpi-label">3 Files, 12 Passwords</p>
+                <p class="kpi-value" id="kpi-vault-links">5 Links</p>
+                <p class="kpi-label" id="kpi-vault-categories">4 Categories</p>
             </div>
 
         </section>
