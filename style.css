@@ -1376,3 +1376,142 @@ body {
 #bill-modal-delete-button:hover {
     filter: brightness(1.1);
 }
+/* ADD to the "5. Card Spanning & Content" section or general card content */
+.log-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 250px; /* Constrain height to keep card size reasonable */
+    overflow-y: auto;
+    transition: all 0.3s ease-out;
+}
+
+.log-list .log-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--c-border);
+    font: var(--font-caption);
+    color: var(--c-text-dark);
+}
+
+.log-list .log-item:last-child {
+    border-bottom: none;
+}
+
+.log-list .log-item .time {
+    font-family: var(--f-mono);
+    color: var(--c-text-muted);
+    margin-right: 12px;
+}
+
+.log-list .log-item .value {
+    font-weight: 600;
+    color: var(--c-primary);
+}
+/* ADD to the end of your style.css file */
+
+/* --- Custom Flash Notification Styles --- */
+#flash-message-container {
+    position: fixed;
+    top: 90px;
+    right: 40px;
+    z-index: 999;
+    pointer-events: none; /* Allows clicks to go through to elements behind */
+}
+
+.flash-message {
+    padding: 14px 20px;
+    margin-bottom: 10px;
+    background: var(--c-primary);
+    color: var(--c-text-dark);
+    font: var(--font-caption);
+    font-weight: 600;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 199, 166, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 4.5s forwards; /* 5s total display time */
+    border: 1px solid rgba(255, 255, 255, 0.5); /* Subtle border for elegance */
+    backdrop-filter: blur(2px); /* Slight blur for modern look */
+}
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+    }
+}
+
+.flash-message i {
+    width: 18px;
+    height: 18px;
+    color: var(--c-text-dark);
+}
+
+/* --- Water Modal Quick Select Styles --- */
+.modal-button.water-option {
+    flex-grow: 1;
+    border: var(--c-border);
+    background: var(--c-bg-main);
+}
+.modal-button.water-option.active-select {
+    background: var(--c-primary);
+    box-shadow: 0 2px 6px rgba(0, 199, 166, 0.3);
+}
+/* --- Fitness Page --- */
+.fitness-stats {
+  /* MODIFIED: Now enforces 5 equal columns for Steps, Cals Out, Workouts, Water, Sleep */
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+  grid-column: span 3;
+}
+/* --- FIX: Manual Entry Modal Row Sizing --- */
+/* Ensure the form row can display fixed width elements correctly */
+#log-activity-modal .modal-form-row .modal-form-group:first-child {
+    flex-grow: 1; /* Give the "Count" input max space */
+}
+
+#log-activity-modal .modal-form-row .modal-form-group:last-child {
+    flex-grow: 0; /* Stop the "Unit" input container from expanding */
+    width: 120px; /* Set a fixed, sensible width for the Unit input */
+    min-width: 100px;
+    flex-shrink: 0;
+}
+/* ADD this new CSS block to your LifeMirror/style.css file */
+
+/* --- FIX: Manual Entry Modal Row Sizing --- */
+/* This addresses the issue where the 'Unit' field was being cropped in the modal. */
+#log-activity-modal .modal-form-row .modal-form-group:first-child {
+    flex-grow: 1; /* Give the "Count" input max space */
+}
+
+#log-activity-modal .modal-form-row .modal-form-group:last-child {
+    flex-grow: 0; /* Stop the "Unit" input container from expanding */
+    width: 120px; /* Set a fixed, sensible width for the Unit input */
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+/* REPLACE the existing .fitness-stats rule (around line 348) in your style.css file */
+/* --- Fitness Page --- */
+.fitness-stats {
+  /* MODIFIED: Now enforces 5 equal columns for KPIs */
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+  grid-column: span 3;
+}

@@ -15,7 +15,66 @@
 </head>
 
 <body>
+    
+    <div id="flash-message-container"></div>
+    
+    <div class="modal-overlay" id="log-activity-modal" style="display: none;">
+        <div class="modal-dialog" style="max-width: 450px;">
+            <h3>Add New Activity Entry</h3>
+            
+            <div class="modal-form-group">
+                <label for="activity-type-select">Activity Type</label>
+                <select id="activity-type-select">
+                    <option value="steps">Steps</option>
+                    <option value="workout">Workout (Minutes)</option>
+                    <option value="sleep">Sleep (Hours)</option>
+                    <option value="calories_out">Calories Burned (Estimated)</option>
+                </select>
+            </div>
 
+            <div class="modal-form-row">
+                <div class="modal-form-group">
+                    <label for="activity-value-input" id="activity-value-label">Value</label>
+                    <input type="number" id="activity-value-input" placeholder="e.g., 5000" min="1">
+                </div>
+                <div class="modal-form-group">
+                    <label for="activity-unit-label">Unit</label>
+                    <input type="text" id="activity-unit-label" value="steps" disabled>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-button secondary" id="activity-modal-cancel-button">Cancel</button>
+                <button class="modal-button" id="activity-modal-log-button">Log Data</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="log-water-modal" style="display: none;">
+        <div class="modal-dialog" style="max-width: 400px;">
+            <h3>Log Water Intake</h3>
+            
+            <div class="modal-form-group">
+                <label>Quick Log Options (ml)</label>
+                <div id="water-quick-select" style="display: flex; gap: 10px; justify-content: center; margin-top: 8px;">
+                    <button class="modal-button secondary water-option" data-volume="250">250 ml</button>
+                    <button class="modal-button secondary water-option" data-volume="500">500 ml</button>
+                    <button class="modal-button secondary water-option" data-volume="750">750 ml</button>
+                </div>
+            </div>
+
+            <div class="modal-form-group">
+                <label for="water-custom-input" style="margin-top: 15px;">Or Enter Custom Volume (ml)</label>
+                <input type="number" id="water-custom-input" placeholder="e.g., 600" min="1">
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-button secondary" id="water-modal-cancel-button">Cancel</button>
+                <button class="modal-button" id="water-modal-log-button" disabled>Log Intake</button>
+            </div>
+        </div>
+    </div>
+    
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
         <ul class="sidebar-menu" id="sidebar-menu">
@@ -47,33 +106,37 @@
                 <p>Your aggregated steps, workouts, calories, and sleep data.</p>
             </div>
             <div class="header-actions">
-                <button class="add-new-button secondary">
-                    <i data-feather="plus-circle"></i> Log Activity
+                <button class="add-new-button secondary" id="log-water-button">
+                    <i data-feather="droplet"></i> Log Water Intake
                 </button>
-                <button class="add-new-button">
+                <button class="add-new-button" id="add-manual-entry-button">
                     <i data-feather="plus"></i> Add Manual Entry
                 </button>
             </div>
         </section>
-
+        
         <section class="page-grid">
-
-            <div class="fitness-stats" style="grid-column: span 3;">
+            
+            <div class="fitness-stats" style="grid-column: span 3; grid-template-columns: repeat(5, 1fr);">
                 <div class="card kpi-card">
                     <p class="kpi-label">Steps Today</p>
-                    <p class="kpi-value">5,000</p>
+                    <p class="kpi-value" id="kpi-steps">5,000</p>
                 </div>
                 <div class="card kpi-card">
                     <p class="kpi-label">Calories Burned</p>
-                    <p class="kpi-value">1,200</p>
+                    <p class="kpi-value" id="kpi-calories-out">1,200</p>
                 </div>
                 <div class="card kpi-card">
                     <p class="kpi-label">Workouts This Week</p>
-                    <p class="kpi-value">2</p>
+                    <p class="kpi-value" id="kpi-workouts">2</p>
+                </div>
+                <div class="card kpi-card">
+                    <p class="kpi-label">Water Intake (Today)</p>
+                    <p class="kpi-value" id="kpi-water">0 ml</p>
                 </div>
                 <div class="card kpi-card">
                     <p class="kpi-label">Sleep (Last Night)</p>
-                    <p class="kpi-value">8 hr</p>
+                    <p class="kpi-value" id="kpi-sleep">8 hr</p>
                 </div>
             </div>
 
@@ -81,7 +144,7 @@
                 <h3>7-Day Trends</h3>
                 <div class="chart-placeholder-large chart-visual">
                     <i data-feather="bar-chart-2"></i>
-                    <span>Trend Chart</span>
+                    <span>Trend Chart (Data simulation needed)</span>
                     <div class="chart-bars">
                         <div></div>
                         <div></div>
@@ -94,20 +157,32 @@
 
             <div class="card health-suggestions">
                 <h3>Health Suggestions</h3>
-                <ul class="suggestion-list">
-                    <li class="suggestion-item">
+                <ul class="suggestion-list" id="health-suggestion-list">
+                    <li class="suggestion-item" data-suggestion-id="rest">
                         <i data-feather="coffee"></i>
                         <p>Consider taking a 30 min rest.</p>
                     </li>
-                    <li class="suggestion-item">
+                    <li class="suggestion-item" data-suggestion-id="walk">
                         <i data-feather="wind"></i>
                         <p>Aim for a 10 min walk today.</p>
                     </li>
-                    <li class="suggestion-item">
+                    <li class="suggestion-item" data-suggestion-id="water">
                         <i data-feather="droplet"></i>
                         <p>Stay hydrated - drink more water.</p>
                     </li>
                 </ul>
+            </div>
+            
+            <div class="card" style="grid-column: span 3;">
+                <div class="card-header">
+                    <h3>Daily Log History</h3>
+                    <button class="add-new-button secondary view-log-toggle" data-action="hide">
+                         <i data-feather="chevron-up"></i> Hide Log
+                    </button>
+                </div>
+                <ul class="log-list" id="daily-log-list">
+                    </ul>
+                <div class="placeholder-text" id="log-history-empty" style="display: none; margin-top: 12px;">No activity logged today.</div>
             </div>
 
         </section>

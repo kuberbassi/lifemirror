@@ -2,6 +2,7 @@
 // GLOBAL VARIABLES & HELPERS
 // ===============================================
 var calendar = null; // To hold the calendar instance
+let sleepCheckInterval = null; // Global to control the hourly sleep notification check
 
 /**
  * Gets today's date in YYYY-MM-DD format
@@ -14,6 +15,45 @@ const getTodayDateString = () => {
     const day = today.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+
+function startSleepNotificationCheck(fitnessHistory, showFlashMessage) {
+    if (sleepCheckInterval) {
+        clearInterval(sleepCheckInterval);
+    }
+    
+    const MORNING_START_HOUR = 6;
+    const MORNING_END_HOUR = 10;
+    const CHECK_INTERVAL_MS = 3600000; // 1 hour
+
+    function checkSleepLog() {
+        const now = new Date();
+        const currentHour = now.getHours();
+        
+        // 1. Check if we are in the morning notification window (6 AM to 10 AM)
+        if (currentHour >= MORNING_START_HOUR && currentHour < MORNING_END_HOUR) {
+            
+            // Determine yesterday's date (where last night's log should be)
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            const yesterdayDate = `${yesterday.getFullYear()}-${(yesterday.getMonth() + 1).toString().padStart(2, '0')}-${yesterday.getDate().toString().padStart(2, '0')}`;
+            
+            // Check for log *date* matching yesterday's date
+            const hasLoggedSleep = fitnessHistory.some(log => log.date === yesterdayDate && log.type === 'sleep');
+
+            if (!hasLoggedSleep) {
+                showFlashMessage("⏰ It's morning! Did you log your sleep for last night?", 'moon');
+            }
+        } else if (currentHour >= MORNING_END_HOUR) {
+             // 2. If we passed the notification window (10 AM), stop the hourly check for the day
+             clearInterval(sleepCheckInterval);
+             sleepCheckInterval = null;
+        }
+    }
+
+    checkSleepLog();
+    sleepCheckInterval = setInterval(checkSleepLog, CHECK_INTERVAL_MS);
+}
+
 
 // ===============================================
 // PAGE-SPECIFIC INITIALIZATION FUNCTIONS
@@ -275,6 +315,407 @@ function initializeTasksPageLogic() {
             calendar.refetchEvents();
         }
     } 
+}
+
+/**
+ * Runs all logic for the Fitness Page (fitness.html)
+ */
+function initializeFitnessPage() {
+    
+    // --- 1. GLOBAL HELPERS ---
+    /**
+     * Shows a custom flash notification in the app.
+     * @param {string} message 
+     * @param {string} iconName 
+     */
+    function showFlashMessage(message, iconName = 'check-circle') {
+        const container = document.getElementById('flash-message-container');
+        if (!container) return;
+
+        const flash = document.createElement('div');
+        flash.className = 'flash-message';
+        flash.innerHTML = `<i data-feather="${iconName}"></i> <span>${message}</span>`;
+        container.appendChild(flash);
+        feather.replace(); // Ensure the icon renders
+
+        // Automatically remove the message after the animation finishes (5 seconds)
+        setTimeout(() => {
+            if (container.contains(flash)) {
+                container.removeChild(flash);
+            }
+        }, 5000);
+    }
+    
+    // --- 2. STATE MANAGEMENT ---
+    const TODAY_DATE = getTodayDateString();
+    
+    let selectedWaterVolume = 0; // State for the water modal
+
+    let fitnessHistory = [
+        // Daily logs (date, steps, calories_out, type, value, unit, time)
+        // Last night's sleep log is marked for yesterday (2025-10-25)
+        { id: 1, date: '2025-10-25', time: '23:00', type: 'sleep', value: 8, unit: 'hours' }, 
+        { id: 2, date: TODAY_DATE, time: '10:00', type: 'steps', value: 3500, unit: 'steps' }, 
+        { id: 3, date: TODAY_DATE, time: '14:00', type: 'steps', value: 500, unit: 'steps' },
+        { id: 4, date: TODAY_DATE, time: '12:00', type: 'calories_out', value: 300, unit: 'kcal' }, 
+        { id: 5, date: TODAY_DATE, time: '17:00', type: 'workout', value: 60, unit: 'min' } 
+    ];
+    
+    let completedSuggestions = []; 
+
+    const kpiSteps = document.getElementById('kpi-steps');
+    const kpiCaloriesOut = document.getElementById('kpi-calories-out');
+    const kpiWorkouts = document.getElementById('kpi-workouts');
+    const kpiWater = document.getElementById('kpi-water'); // KPI ELEMENT for Water
+    const kpiSleep = document.getElementById('kpi-sleep');
+    const suggestionList = document.getElementById('health-suggestion-list');
+
+    // Modals & Inputs
+    const logActivityModal = document.getElementById('log-activity-modal');
+    const logWaterModal = document.getElementById('log-water-modal'); 
+    const logWaterButton = document.getElementById('log-water-button'); 
+    const waterModalCancelButton = document.getElementById('water-modal-cancel-button');
+    const waterModalLogButton = document.getElementById('water-modal-log-button');
+    const waterQuickSelect = document.getElementById('water-quick-select');
+    const waterCustomInput = document.getElementById('water-custom-input');
+    
+    const addManualEntryButton = document.getElementById('add-manual-entry-button');
+    const activityModalCancelButton = document.getElementById('activity-modal-cancel-button');
+    const activityModalLogButton = document.getElementById('activity-modal-log-button');
+    const activityTypeSelect = document.getElementById('activity-type-select');
+    const activityValueInput = document.getElementById('activity-value-input');
+    const activityValueLabel = document.getElementById('activity-value-label');
+    const activityUnitLabel = document.getElementById('activity-unit-label');
+
+    // Log History Elements
+    const dailyLogList = document.getElementById('daily-log-list');
+    const logHistoryEmpty = document.getElementById('log-history-empty');
+    const viewLogToggle = document.querySelector('.view-log-toggle'); 
+
+
+    // --- 3. CORE RENDER FUNCTION ---
+    function renderFitnessPage() {
+        
+        // --- A. Calculate KPIs ---
+        let totalStepsToday = 0;
+        let totalCaloriesBurnedToday = 0;
+        let workoutsThisWeek = 0;
+        let totalWaterIntake = 0;
+        
+        // Find the most recent sleep log for the 'Sleep (Last Night)' KPI
+        const sleepLog = fitnessHistory.filter(log => log.type === 'sleep')
+                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || {value: 0}; 
+        
+        const sleepLastNight = sleepLog.value;
+
+
+        fitnessHistory.forEach(log => {
+            if (log.date === TODAY_DATE) {
+                if (log.type === 'steps') {
+                    totalStepsToday += log.value || 0;
+                } else if (log.type === 'calories_out') {
+                    totalCaloriesBurnedToday += log.value || 0;
+                } else if (log.type === 'water_intake') {
+                    totalWaterIntake += log.value || 0;
+                }
+            }
+            // Logic for Workouts This Week (counting entries since a fixed date, simplified here for mock data)
+            if (log.type === 'workout' && log.date >= '2025-10-20') { 
+                workoutsThisWeek++;
+            }
+        });
+        
+        // --- B. Update UI Elements ---
+        if (kpiSteps) kpiSteps.textContent = totalStepsToday.toLocaleString();
+        if (kpiCaloriesOut) kpiCaloriesOut.textContent = totalCaloriesBurnedToday.toLocaleString();
+        if (kpiWorkouts) kpiWorkouts.textContent = workoutsThisWeek;
+        if (kpiWater) kpiWater.textContent = `${totalWaterIntake.toLocaleString()} ml`;
+        if (kpiSleep) kpiSleep.textContent = `${sleepLastNight} hr`;
+        
+        // --- C. Water Log Button Status ---
+        if (logWaterButton) {
+            logWaterButton.disabled = false;
+            logWaterButton.style.opacity = 1;
+            logWaterButton.textContent = 'Log Water Intake';
+        }
+        
+        // --- D. Render Suggestions ---
+        if (suggestionList) {
+            suggestionList.querySelectorAll('.suggestion-item').forEach(item => {
+                const id = item.dataset.suggestionId;
+                if (completedSuggestions.includes(id)) {
+                    item.classList.add('completed');
+                } else {
+                    item.classList.remove('completed');
+                }
+                 item.replaceWith(item.cloneNode(true));
+            });
+            
+            const liveSuggestions = document.getElementById('health-suggestion-list').querySelectorAll('.suggestion-item');
+            
+            liveSuggestions.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const id = item.dataset.suggestionId;
+                    if (!completedSuggestions.includes(id)) {
+                        completedSuggestions.push(id);
+                        item.classList.add('completed');
+                        renderFitnessPage(); 
+                    }
+                });
+            });
+        }
+        
+        // --- E. Render Daily Log History (Latest on Top) ---
+        if (dailyLogList) {
+            const todayLogs = fitnessHistory
+                .filter(log => log.date === TODAY_DATE) // Filter to ONLY today
+                // MODIFIED: Sort newest to oldest
+                .sort((a, b) => (b.time || '00:00').localeCompare(a.time || '00:00'));
+
+            dailyLogList.innerHTML = ''; 
+            
+            if (todayLogs.length === 0) {
+                 dailyLogList.style.display = 'none';
+                 if(logHistoryEmpty) logHistoryEmpty.style.display = 'block';
+            } else {
+                 dailyLogList.style.display = 'block';
+                 if(logHistoryEmpty) logHistoryEmpty.style.display = 'none';
+                 
+                 todayLogs.forEach(log => {
+                     const li = document.createElement('li');
+                     li.className = 'log-item';
+                     
+                     let typeText = log.type.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                     let valueUnit = log.unit;
+                     
+                     if (log.type === 'water_intake') {
+                          typeText = 'Water Intake';
+                          valueUnit = 'ml';
+                     }
+
+                     li.innerHTML = `
+                         <span class="time">${log.time || '--:--'}</span>
+                         <span>${typeText}</span>
+                         <span class="value">${log.value.toLocaleString()} ${valueUnit}</span>
+                     `;
+                     dailyLogList.appendChild(li);
+                 });
+            }
+        }
+        
+        feather.replace();
+    }
+
+    // --- 4. MODAL & LOGIC HANDLERS ---
+    
+    // Manual Entry Modal Handlers
+    function updateActivityUnit() {
+        if (!activityTypeSelect || !activityValueInput || !activityUnitLabel || !activityValueLabel) return;
+
+        const type = activityTypeSelect.value;
+        let unitText = 'steps';
+        let placeholder = 'e.g., 5000';
+        let label = 'Count';
+
+        if (type === 'workout') {
+            unitText = 'minutes';
+            placeholder = 'e.g., 30';
+            label = 'Duration';
+        } else if (type === 'sleep') {
+            unitText = 'hours';
+            placeholder = 'e.g., 8';
+            label = 'Duration';
+        } else if (type === 'calories_out') {
+            unitText = 'kcals burned';
+            placeholder = 'e.g., 350';
+            label = 'Value';
+        } else {
+            unitText = type;
+        }
+        
+        activityUnitLabel.value = unitText;
+        activityValueInput.placeholder = placeholder;
+        activityValueLabel.textContent = label;
+        activityValueInput.value = ''; 
+    }
+    function showActivityModal() {
+        if (logActivityModal) logActivityModal.style.display = 'flex';
+        activityValueInput.value = '';
+        activityTypeSelect.value = 'steps'; 
+        updateActivityUnit(); 
+    }
+    function hideActivityModal() {
+        if (logActivityModal) logActivityModal.style.display = 'none';
+    }
+
+    // Water Log Modal Handlers
+    function showWaterModal() {
+        if (logWaterModal) logWaterModal.style.display = 'flex';
+        selectedWaterVolume = 0;
+        waterCustomInput.value = '';
+        waterModalLogButton.disabled = true;
+        waterQuickSelect.querySelectorAll('.water-option').forEach(btn => btn.classList.remove('active-select'));
+    }
+    
+    function hideWaterModal() {
+        if (logWaterModal) logWaterModal.style.display = 'none';
+    }
+
+    // Main Log Function (Called by Water Modal Log button)
+    function logWaterIntake(volume) {
+        if (volume <= 0) return;
+        
+        const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        
+        const newLog = {
+            id: Date.now(),
+            date: TODAY_DATE,
+            time: nowTime,
+            type: 'water_intake',
+            value: volume,
+            unit: 'ml' 
+        };
+
+        fitnessHistory.push(newLog);
+        
+        hideWaterModal();
+        showFlashMessage(`Logged ${volume} ml of water! Staying hydrated.`);
+        renderFitnessPage();
+    }
+
+
+    // --- 5. EVENT LISTENERS ---
+
+    // Water Modal Listeners
+    if (logWaterButton) logWaterButton.addEventListener('click', showWaterModal);
+    if (waterModalCancelButton) waterModalCancelButton.addEventListener('click', hideWaterModal);
+    if (logWaterModal) logWaterModal.addEventListener('click', (e) => {
+        if (e.target === logWaterModal) hideWaterModal();
+    });
+    
+    // Quick Select Listener
+    if (waterQuickSelect) {
+        waterQuickSelect.addEventListener('click', (e) => {
+            const btn = e.target.closest('.water-option');
+            if (btn) {
+                waterQuickSelect.querySelectorAll('.water-option').forEach(b => b.classList.remove('active-select'));
+                btn.classList.add('active-select');
+                selectedWaterVolume = parseInt(btn.dataset.volume);
+                waterCustomInput.value = ''; 
+                waterModalLogButton.disabled = false;
+            }
+        });
+    }
+
+    // Custom Input Listener
+    if (waterCustomInput) {
+        waterCustomInput.addEventListener('input', () => {
+            const volume = parseInt(waterCustomInput.value);
+            if (volume > 0) {
+                selectedWaterVolume = volume;
+                waterModalLogButton.disabled = false;
+                waterQuickSelect.querySelectorAll('.water-option').forEach(btn => btn.classList.remove('active-select'));
+            } else {
+                selectedWaterVolume = 0;
+                const isQuickSelectActive = waterQuickSelect.querySelector('.water-option.active-select');
+                if (!isQuickSelectActive) {
+                    waterModalLogButton.disabled = true;
+                }
+            }
+        });
+    }
+    
+    // Final Water Log Action
+    if (waterModalLogButton) {
+        waterModalLogButton.addEventListener('click', () => {
+            if (selectedWaterVolume > 0) {
+                logWaterIntake(selectedWaterVolume);
+            }
+        });
+    }
+
+
+    // Manual Entry Listeners
+    if (addManualEntryButton) addManualEntryButton.addEventListener('click', showActivityModal);
+    if (activityModalCancelButton) activityModalCancelButton.addEventListener('click', hideActivityModal);
+    if (activityTypeSelect) activityTypeSelect.addEventListener('change', updateActivityUnit);
+    if (logActivityModal) logActivityModal.addEventListener('click', (e) => {
+        if (e.target === logActivityModal) hideActivityModal();
+    });
+
+
+    // Log Data Submission
+    if (activityModalLogButton) {
+        activityModalLogButton.addEventListener('click', () => {
+            const type = activityTypeSelect.value;
+            const value = parseInt(activityValueInput.value);
+            const unit = activityUnitLabel.value;
+            const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+            if (isNaN(value) || value <= 0) {
+                showFlashMessage(`Please enter a valid positive number for ${unit}.`, 'alert-triangle');
+                return;
+            }
+            
+            // --- DATA INTEGRITY CHECK (Only restrict sleep to one log per 24 hours) ---
+            if (type === 'sleep') {
+                const twentyFourHoursAgo = Date.now() - 86400000;
+                // Look for the most recent log regardless of date, and check its age
+                const lastSleepLog = fitnessHistory.filter(log => log.type === 'sleep')
+                                                       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]; 
+
+                if (lastSleepLog && new Date(lastSleepLog.date).getTime() > twentyFourHoursAgo) {
+                    showFlashMessage("Error: Only one sleep entry allowed per 24 hours.", 'alert-triangle');
+                    return;
+                }
+            }
+
+            const newLog = {
+                id: Date.now(),
+                date: TODAY_DATE,
+                time: nowTime,
+                type: type,
+                value: value,
+                unit: unit
+            };
+
+            fitnessHistory.push(newLog);
+            
+            hideActivityModal();
+            showFlashMessage(`Logged ${value.toLocaleString()} ${unit} for ${type}.`);
+            renderFitnessPage();
+        });
+    }
+
+    // Log History Toggle Listener
+    if (viewLogToggle) {
+        viewLogToggle.addEventListener('click', (e) => {
+            const list = dailyLogList;
+            const action = e.currentTarget.dataset.action;
+            
+            if (action === 'hide') {
+                list.style.maxHeight = '0';
+                list.style.paddingTop = '0';
+                list.style.overflow = 'hidden';
+                e.currentTarget.dataset.action = 'show';
+                e.currentTarget.innerHTML = '<i data-feather="chevron-down"></i> Show Log';
+            } else {
+                list.style.maxHeight = '250px';
+                list.style.paddingTop = '12px';
+                list.style.overflow = 'auto';
+                e.currentTarget.dataset.action = 'hide';
+                e.currentTarget.innerHTML = '<i data-feather="chevron-up"></i> Hide Log';
+            }
+            feather.replace();
+        });
+    }
+
+    // --- 6. SLEEP NOTIFICATION TIMER ---
+    startSleepNotificationCheck(fitnessHistory, showFlashMessage);
+
+
+    // --- 7. INITIAL RENDER ---
+    renderFitnessPage();
 }
 
 /**
