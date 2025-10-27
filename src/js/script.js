@@ -6,6 +6,7 @@ var calendar = null; // Holds the FullCalendar instance
 let sleepCheckInterval = null;
 let IS_SMART_NOTIFICATIONS_MOCK = true; // Kept from original, controls mock notification filtering
 let IS_NOTIFICATION_PANEL_OPEN = false;
+let activeTimer = null; // Holds interval ID for meditation timer
 
 // --- GLOBAL DATA STATE (Populated by API) ---
 let taskState = [];
@@ -34,6 +35,36 @@ const moodMap = {
     'great': { label: 'Great', value: 4, color: 'var(--c-primary)' }
 };
 
+
+// --- Helper to generate profile pic ---
+const generateInitials = (name, imgElement) => {
+    if (!name || !imgElement) return;
+    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+    // Replace the <img> with a <div> showing initials
+    const parent = imgElement.parentNode;
+    if (!parent) return;
+
+    const initialsDiv = document.createElement('div');
+    initialsDiv.className = 'profile-pic-initials'; // You can style this
+    // Inline styles for a quick default
+    Object.assign(initialsDiv.style, {
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        background: 'var(--c-primary)',
+        color: 'var(--c-text-dark)',
+        display: 'grid',
+        placeItems: 'center',
+        fontWeight: '600',
+        fontSize: '16px',
+        border: '2px solid var(--c-primary)',
+        flexShrink: '0'
+    });
+
+    initialsDiv.textContent = initials;
+    parent.replaceChild(initialsDiv, imgElement);
+};
 
 // ===============================================
 // AUTH0 CONFIGURATION & INITIALIZATION
@@ -193,6 +224,40 @@ const logout = () => {
     }
 };
 
+/**
+ * Attaches login listener for the login.html page.
+ */
+function initializeLoginPage() {
+    const loginButton = document.getElementById('login-button');
+    const loadingMessage = document.getElementById('loading-message');
+
+    if (loginButton) {
+        loginButton.addEventListener('click', async () => {
+            if (!auth0) {
+                alert("Authentication client is not ready. Please refresh.");
+                return;
+            }
+            loadingMessage.style.display = 'block';
+            loginButton.disabled = true;
+
+            try {
+                // Use the SDK's login method, which correctly creates the 'state'
+                await auth0.loginWithRedirect({
+                    authorizationParams: {
+                        // Tell Auth0 to return to index.html after login
+                        redirect_uri: window.location.origin + '/index.html'
+                    }
+                });
+            } catch (err) {
+                console.error("Error initiating login:", err);
+                loadingMessage.style.display = 'none';
+                loginButton.disabled = false;
+                alert("Error starting login. Check console.");
+            }
+        });
+    }
+}
+
 // ===============================================
 // API SERVICE LAYER
 // ===============================================
@@ -322,12 +387,27 @@ const dashboardApiService = {
             const response = await fetch('/api/dashboard/all', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            // Reusing handleResponse logic locally for simplicity
+            // Full handleResponse logic
             const handleResponse = async (response, operation) => {
-                 if (!response.ok) { /* ... same error handling as createApiService ... */ }
-                 const contentType = response.headers.get("content-type");
-                 if (response.status === 204 || !contentType || !contentType.includes("application/json")) { return response.status < 300; }
-                 return await response.json();
+                if (!response.ok) {
+                    const status = response.status;
+                    let errorMsg = `HTTP error ${status} during ${operation} dashboard`;
+                    try {
+                        const errorBody = await response.json();
+                        errorMsg += `: ${errorBody.message || JSON.stringify(errorBody)}`;
+                    } catch (e) {
+                        const errorText = await response.text();
+                        errorMsg += `: ${errorText}`;
+                    }
+                    console.error(`${operation} dashboard failed:`, errorMsg);
+                    if (status === 401 || status === 403) throw new Error('Unauthorized');
+                    throw new Error(errorMsg);
+                }
+                const contentType = response.headers.get("content-type");
+                if (response.status === 204 || !contentType || !contentType.includes("application/json")) {
+                    return response.status < 300;
+                }
+                return await response.json();
             };
             const data = await handleResponse(response, 'fetch dashboard');
             console.log("Successfully fetched dashboard data.");
@@ -444,7 +524,7 @@ function showFlashMessage(message, iconName = 'check-circle') {
     flash.className = 'flash-message';
     flash.innerHTML = `<i data-feather="${iconName}"></i> <span>${message}</span>`;
     container.appendChild(flash);
-    try { feather.replace(); } catch(e) {}
+    try { feather.replace(); } catch (e) { }
 
     // Auto-remove after 5 seconds
     setTimeout(() => {
@@ -498,8 +578,54 @@ function calculateNextDueDate(currentDueDate, frequency) {
 
 
 // --- Notification Panel & Sleep Check (Mocks/Placeholders) ---
-function toggleNotificationPanel() { console.log("Toggle Notification Panel (Mock)"); /* ... (implementation needed) ... */ }
-function renderNotificationPanel(panel) { console.log("Render Notification Panel (Mock)"); /* ... (implementation needed) ... */ }
+function toggleNotificationPanel() {
+    const panel = document.getElementById('global-notification-panel');
+    if (!panel) return;
+
+    // Find the bell icon itself to position the panel
+    const bellIcon = document.querySelector('.global-controls .control-icon-wrapper');
+    if (bellIcon) {
+        const rect = bellIcon.getBoundingClientRect();
+        panel.style.top = `${rect.bottom + 12}px`; // 12px below the bell
+        panel.style.right = `${window.innerWidth - rect.right - 10}px`; // Align right edge
+    }
+
+    IS_NOTIFICATION_PANEL_OPEN = !IS_NOTIFICATION_PANEL_OPEN;
+    panel.style.display = IS_NOTIFICATION_PANEL_OPEN ? 'flex' : 'none';
+
+    if (IS_NOTIFICATION_PANEL_OPEN) {
+        renderNotificationPanel(panel); // Render content when opening
+    }
+}
+
+function renderNotificationPanel(panel) {
+    if (!panel) return;
+
+    // This data would eventually come from a 'notifications' state
+    const notifications = [
+        { id: 1, type: 'critical', text: 'Bill "Netflix" is overdue!' },
+        { id: 2, type: 'low', text: 'Task "Buy groceries" due today.' },
+        { id: 3, type: 'low', text: '5,000 steps reached!' },
+    ];
+
+    panel.innerHTML = '<h4>Notifications</h4>'; // Clear/add title
+
+    if (notifications.length === 0) {
+        panel.innerHTML += '<div class="notification-item-empty">No new notifications.</div>';
+        return;
+    }
+
+    notifications.forEach(n => {
+        const item = document.createElement('div');
+        item.className = `notification-item ${n.type}`;
+        item.innerHTML = `
+            <i data-feather="${n.type === 'critical' ? 'alert-triangle' : 'info'}"></i>
+            <p>${n.text}</p>
+        `;
+        panel.appendChild(item);
+    });
+    try { feather.replace(); } catch (e) { }
+}
 function startSleepNotificationCheck() { console.log("Start Sleep Check (Mock)"); /* ... (implementation needed) ... */ }
 
 // Function used by Vault page to add tasks
@@ -518,6 +644,78 @@ async function addNewTaskFromVault(text, duration) {
     } catch (error) {
         console.error("Failed to add task from Vault:", error);
         // Flash message shown by API service on error
+    }
+}
+
+/**
+ * Starts a countdown timer on a remedy button.
+ */
+function startTimer(button, durationMinutes, initialText) {
+    if (activeTimer) return alert("Timer already running!");
+
+    let totalSeconds = durationMinutes * 60;
+    button.disabled = true;
+
+    activeTimer = setInterval(() => {
+        totalSeconds--;
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        button.textContent = `Active: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        if (totalSeconds <= 0) {
+            // Pass 'originalText' so markRemedyComplete knows what was completed
+            markRemedyComplete(button, originalText, 'timer');
+        }
+    }, 1000);
+}
+
+/**
+ * Marks a remedy as complete and logs the activity.
+ */
+async function markRemedyComplete(button, originalText, type) {
+    if (activeTimer && type === 'timer') {
+        clearInterval(activeTimer);
+        activeTimer = null;
+    }
+
+    button.textContent = 'Completed';
+    button.disabled = true;
+    button.closest('.suggestion-item')?.classList.add('completed');
+
+    let logType, logValue, logUnit, successMsg, remedyText;
+
+    // Get the text from the <p> tag, not the button
+    remedyText = button.closest('.suggestion-item')?.querySelector('p')?.textContent || '';
+
+    if (type === 'timer') {
+        // This was the meditation timer
+        logType = 'workout'; // Log meditation as a 'workout'
+        logValue = parseInt(remedyText.match(/\d+/)[0] || 5); // Get duration from text like "Meditate 5 mins."
+        logUnit = 'min';
+        successMsg = 'Meditation logged!';
+    } else {
+        // This was a 'log' type (break or read)
+        logValue = 15; // Default 15 min
+        logUnit = 'min';
+
+        if (remedyText.toLowerCase().includes('break')) {
+            logType = 'workout'; // Log as 'workout'
+            successMsg = 'Break logged!';
+        } else if (remedyText.toLowerCase().includes('read')) {
+            logType = 'workout'; // Log as 'workout'
+            successMsg = 'Reading logged!';
+        }
+    }
+
+    // Use the existing fitness logger
+    if (logType) {
+        // We log 'break' and 'reading' as generic workouts
+        await logFitnessEntry(logType, logValue, logUnit);
+        showFlashMessage(successMsg, 'check-circle');
+
+        // Refresh mood and fitness to show new data
+        await refreshState('mood');
+        await refreshState('fitness');
     }
 }
 
@@ -598,33 +796,33 @@ function initializeDashboardPage() {
 
         // --- 2. UPDATE UI ---
         // Life Score Card
-        if(lifeScoreElement) lifeScoreElement.textContent = currentScore;
-        if(document.getElementById('score-tasks')) document.getElementById('score-tasks').textContent = `Tasks (${Math.round(componentScores.tasks)}%)`;
-        if(document.getElementById('score-finance')) document.getElementById('score-finance').textContent = `Financial Health (${Math.round(componentScores.finance)}%)`;
-        if(document.getElementById('score-fitness')) document.getElementById('score-fitness').textContent = `Fitness (${Math.round(componentScores.fitness)}%)`;
-        if(document.getElementById('score-mood')) document.getElementById('score-mood').textContent = `Mood/Stress (${Math.round(componentScores.mood)}%)`;
-        if(document.getElementById('score-digital')) document.getElementById('score-digital').textContent = `Digital Org (${Math.round(digitalScore)}%)`; // Use calculated digital score
+        if (lifeScoreElement) lifeScoreElement.textContent = currentScore;
+        if (document.getElementById('score-tasks')) document.getElementById('score-tasks').textContent = `Tasks (${Math.round(componentScores.tasks)}%)`;
+        if (document.getElementById('score-finance')) document.getElementById('score-finance').textContent = `Financial Health (${Math.round(componentScores.finance)}%)`;
+        if (document.getElementById('score-fitness')) document.getElementById('score-fitness').textContent = `Fitness (${Math.round(componentScores.fitness)}%)`;
+        if (document.getElementById('score-mood')) document.getElementById('score-mood').textContent = `Mood/Stress (${Math.round(componentScores.mood)}%)`;
+        if (document.getElementById('score-digital')) document.getElementById('score-digital').textContent = `Digital Org (${Math.round(digitalScore)}%)`; // Use calculated digital score
 
         // KPI Cards
-        if(document.getElementById('kpi-mood-value')) document.getElementById('kpi-mood-value').textContent = moodLabel;
-        if(document.getElementById('kpi-stress-index')) document.getElementById('kpi-stress-index').textContent = `Stress Index: ${stressIndex}%`;
-        if(document.getElementById('kpi-mood-note')) document.getElementById('kpi-mood-note').textContent = moodNote;
+        if (document.getElementById('kpi-mood-value')) document.getElementById('kpi-mood-value').textContent = moodLabel;
+        if (document.getElementById('kpi-stress-index')) document.getElementById('kpi-stress-index').textContent = `Stress Index: ${stressIndex}%`;
+        if (document.getElementById('kpi-mood-note')) document.getElementById('kpi-mood-note').textContent = moodNote;
 
         const stepsValueEl = document.getElementById('kpi-steps-value');
         if (stepsValueEl) {
-             stepsValueEl.innerHTML = `<span class="kpi-steps-label">Steps: </span><span id="steps-number-val">${totalStepsToday.toLocaleString()}</span>`;
+            stepsValueEl.innerHTML = `<span class="kpi-steps-label">Steps: </span><span id="steps-number-val">${totalStepsToday.toLocaleString()}</span>`;
         }
-        if(document.getElementById('kpi-calories-value-label')) document.getElementById('kpi-calories-value-label').textContent = `Calories Burned: ${totalCaloriesOutToday.toLocaleString()}`;
-        if(document.getElementById('kpi-sleep-value-label')) document.getElementById('kpi-sleep-value-label').textContent = `Last Sleep: ${sleepLastNight > 0 ? sleepLastNight : '--'} hr`;
-        if(document.getElementById('kpi-water-value-label')) document.getElementById('kpi-water-value-label').textContent = `Water Intake: ${totalWaterIntake.toLocaleString()} ml`;
+        if (document.getElementById('kpi-calories-value-label')) document.getElementById('kpi-calories-value-label').textContent = `Calories Burned: ${totalCaloriesOutToday.toLocaleString()}`;
+        if (document.getElementById('kpi-sleep-value-label')) document.getElementById('kpi-sleep-value-label').textContent = `Last Sleep: ${sleepLastNight > 0 ? sleepLastNight : '--'} hr`;
+        if (document.getElementById('kpi-water-value-label')) document.getElementById('kpi-water-value-label').textContent = `Water Intake: ${totalWaterIntake.toLocaleString()} ml`;
 
         const financeValueEl = document.getElementById('kpi-finance-value');
-        if(financeValueEl) financeValueEl.innerHTML = `₹${totalDueAmountThisWeek.toLocaleString()} <span class="kpi-label" id="finance-due-label">Due</span>`;
-        if(document.getElementById('kpi-finance-health-percent')) document.getElementById('kpi-finance-health-percent').textContent = `Health: ${financialHealth}%`;
-        if(document.getElementById('kpi-finance-subs-monthly')) document.getElementById('kpi-finance-subs-monthly').textContent = `Subscriptions: ₹${activeSubscriptionTotal.toLocaleString()} / mo`;
+        if (financeValueEl) financeValueEl.innerHTML = `₹${totalDueAmountThisWeek.toLocaleString()} <span class="kpi-label" id="finance-due-label">Due</span>`;
+        if (document.getElementById('kpi-finance-health-percent')) document.getElementById('kpi-finance-health-percent').textContent = `Health: ${financialHealth}%`;
+        if (document.getElementById('kpi-finance-subs-monthly')) document.getElementById('kpi-finance-subs-monthly').textContent = `Subscriptions: ₹${activeSubscriptionTotal.toLocaleString()} / mo`;
 
-        if(document.getElementById('kpi-vault-links')) document.getElementById('kpi-vault-links').textContent = `${totalVaultLinks} Links`;
-        if(document.getElementById('kpi-vault-categories')) document.getElementById('kpi-vault-categories').textContent = `${uniqueCategories} Categories`;
+        if (document.getElementById('kpi-vault-links')) document.getElementById('kpi-vault-links').textContent = `${totalVaultLinks} Links`;
+        if (document.getElementById('kpi-vault-categories')) document.getElementById('kpi-vault-categories').textContent = `${uniqueCategories} Categories`;
 
         // Radar Chart
         const radarCtx = document.getElementById('life-score-radar-chart')?.getContext('2d');
@@ -690,9 +888,9 @@ function initializeDashboardPage() {
 
             remedyList.innerHTML = '';
             if (actionItems.length === 0) {
-                 remedyList.innerHTML = `<li class="remedy-item" data-status="info"><i data-feather="thumbs-up"></i><p>All clear! No critical actions or tasks for today.</p></li>`;
+                remedyList.innerHTML = `<li class="remedy-item" data-status="info"><i data-feather="thumbs-up"></i><p>All clear! No critical actions or tasks for today.</p></li>`;
             } else {
-                 actionItems.forEach(item => {
+                actionItems.forEach(item => {
                     const isCompleted = (item.action === 'pay' && billState.find(b => b.id === item.dataId)?.paid); // Check if bill is actually paid
                     const li = document.createElement('li');
                     li.className = `remedy-item ${isCompleted ? 'completed' : ''}`;
@@ -707,11 +905,11 @@ function initializeDashboardPage() {
                         </button>
                     `;
                     remedyList.appendChild(li);
-                 });
+                });
             }
         }
 
-        try { feather.replace(); } catch (e) {}
+        try { feather.replace(); } catch (e) { }
         console.log("Dashboard rendering complete.");
     }; // End of renderDashboardMetrics
 
@@ -753,7 +951,7 @@ function initializeDashboardPage() {
 
             button.disabled = true; // Disable button immediately
             button.innerHTML = '<i data-feather="loader" class="spin"></i>'; // Show loading spinner
-            try { feather.replace(); } catch (e) {}
+            try { feather.replace(); } catch (e) { }
 
             try {
                 if (action === 'pay') {
@@ -771,7 +969,7 @@ function initializeDashboardPage() {
                 } else if (action === 'log-break') {
                     // Placeholder: Log a 'break' fitness entry or similar
                     showFlashMessage('Break logged. Stress index updated.', 'coffee');
-                     // Placeholder: Update mood state if needed
+                    // Placeholder: Update mood state if needed
                     renderDashboardMetrics(); // Re-render immediately for visual feedback
                 } else if (action === 'ack-sleep') {
                     showFlashMessage('Low sleep acknowledged.', 'moon');
@@ -789,11 +987,11 @@ function initializeDashboardPage() {
                 button.textContent = remedyItem.querySelector('p').textContent.includes('Pay') ? 'Pay' : (remedyItem.querySelector('p').textContent.includes('Break') ? 'Log Break' : 'Complete');
                 button.disabled = false;
             } finally {
-                 // Ensure spinner stops even if refresh is slow or fails
-                 if (!remedyItem.classList.contains('completed')) {
+                // Ensure spinner stops even if refresh is slow or fails
+                if (!remedyItem.classList.contains('completed')) {
                     // Restore button text if action didn't complete visually
                     button.textContent = remedyItem.querySelector('p').textContent.includes('Pay') ? 'Pay' : (remedyItem.querySelector('p').textContent.includes('Break') ? 'Log Break' : 'Complete');
-                 }
+                }
             }
         });
     } // End of attachDashboardListeners
@@ -862,12 +1060,12 @@ function initializeTasksPageLogic() {
             mainTaskList.innerHTML = `<li class="task-item-empty">No tasks found matching filter '${activeTaskFilter}'.</li>`;
         } else {
             displayTasks.forEach(task => {
-                 const li = document.createElement('li');
-                 li.className = `task-item ${task.completed ? 'completed' : ''}`;
-                 li.dataset.id = task.id;
-                 let formattedDate = task.date ? new Date(task.date + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                li.dataset.id = task.id;
+                let formattedDate = task.date ? new Date(task.date + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
 
-                 li.innerHTML = `
+                li.innerHTML = `
                     <input type="checkbox" id="task-${task.id}" data-task-id="${task.id}" ${task.completed ? 'checked' : ''}>
                     <label for="task-${task.id}">${task.text}</label>
                     <span class="task-date">${formattedDate}</span>
@@ -877,10 +1075,10 @@ function initializeTasksPageLogic() {
                         <button class="delete-task-button" data-id="${task.id}" title="Delete Task"><i data-feather="trash-2" style="width: 14px;"></i></button>
                     </div>
                  `;
-                 mainTaskList.appendChild(li);
+                mainTaskList.appendChild(li);
             });
         }
-        try { feather.replace(); } catch (e) {}
+        try { feather.replace(); } catch (e) { }
         console.log("Task list rendering complete.");
 
         // Re-attach listeners after rendering
@@ -989,12 +1187,12 @@ function initializeTasksPageLogic() {
         } catch (error) { console.error("Failed to update task:", error); }
     });
     document.getElementById('edit-modal-delete-button')?.addEventListener('click', () => {
-         const taskId = document.getElementById('edit-task-id-input').value;
-         const task = taskState.find(t => t.id === taskId);
-         if(task) {
-             editModalControls.hide();
-             showDeleteConfirmModal(task.id, task.text);
-         }
+        const taskId = document.getElementById('edit-task-id-input').value;
+        const task = taskState.find(t => t.id === taskId);
+        if (task) {
+            editModalControls.hide();
+            showDeleteConfirmModal(task.id, task.text);
+        }
     });
 
     // Delete Confirmation Modal
@@ -1021,13 +1219,13 @@ function initializeTasksPageLogic() {
             }
         });
         mainTaskList?.addEventListener('click', (e) => {
-             const editButton = e.target.closest('.edit-task-button');
-             const deleteButton = e.target.closest('.delete-task-button');
-             if (editButton) openEditModal(editButton.dataset.id);
-             if (deleteButton) {
-                 const task = taskState.find(t => t.id === deleteButton.dataset.id);
-                 if(task) showDeleteConfirmModal(task.id, task.text);
-             }
+            const editButton = e.target.closest('.edit-task-button');
+            const deleteButton = e.target.closest('.delete-task-button');
+            if (editButton) openEditModal(editButton.dataset.id);
+            if (deleteButton) {
+                const task = taskState.find(t => t.id === deleteButton.dataset.id);
+                if (task) showDeleteConfirmModal(task.id, task.text);
+            }
         });
     }
 
@@ -1075,14 +1273,14 @@ function initializeTasksPageLogic() {
                 console.log("FullCalendar rendered.");
             } catch (renderErr) { console.error("Error rendering FullCalendar:", renderErr); }
         } else if (window.calendar) {
-             console.log("FullCalendar already initialized. Refetching events.");
-             window.calendar.refetchEvents();
+            console.log("FullCalendar already initialized. Refetching events.");
+            window.calendar.refetchEvents();
         } else { console.warn("Calendar element or FullCalendar library not found."); }
     }
 
     async function checkCalendarAccess() {
         console.log("Checking calendar access...");
-        if (!auth0) { console.warn("Auth0 client not ready for calendar check."); if(calendarOverlay) calendarOverlay.style.display = 'flex'; return; }
+        if (!auth0) { console.warn("Auth0 client not ready for calendar check."); if (calendarOverlay) calendarOverlay.style.display = 'flex'; return; }
         const isAuthenticated = await auth0.isAuthenticated();
         if (isAuthenticated) {
             if (calendarOverlay) calendarOverlay.style.display = 'none';
@@ -1093,7 +1291,7 @@ function initializeTasksPageLogic() {
             const calendarEl = document.getElementById('calendar');
             if (calendarEl) calendarEl.innerHTML = ''; // Clear content if not authenticated
         }
-        try { feather.replace(); } catch (e) {}
+        try { feather.replace(); } catch (e) { }
     }
 
     calendarSignInButton?.addEventListener('click', async () => {
@@ -1135,8 +1333,8 @@ function initializeFinancePage() {
                 bill.dueDays = calculateDueDays(bill.dueDate);
                 bill.overdue = bill.dueDays < 0;
             } else {
-                 bill.dueDays = bill.paid ? Infinity : 999; // Treat paid/no date as non-urgent
-                 bill.overdue = false;
+                bill.dueDays = bill.paid ? Infinity : 999; // Treat paid/no date as non-urgent
+                bill.overdue = false;
             }
         });
 
@@ -1159,23 +1357,23 @@ function initializeFinancePage() {
         const totalDueThisWeek = billState.filter(b => !b.paid && b.dueDays >= 0 && b.dueDays <= 7).reduce((sum, b) => sum + b.amount, 0);
         const activeSubscriptionTotal = billState.filter(b => b.frequency !== 'one-time' && !b.paid).reduce((sum, b) => sum + b.amount, 0);
         const financialHealth = billState.length > 0 ? Math.round(billState.filter(b => b.paid).length / billState.length * 100) : 100;
-        if(document.getElementById('kpi-due')) document.getElementById('kpi-due').textContent = `₹${totalDueThisWeek.toLocaleString('en-IN')}`;
-        if(document.getElementById('kpi-subs')) document.getElementById('kpi-subs').textContent = `₹${activeSubscriptionTotal.toLocaleString('en-IN')} / mo`;
-        if(document.getElementById('kpi-health')) document.getElementById('kpi-health').textContent = `${financialHealth}%`;
+        if (document.getElementById('kpi-due')) document.getElementById('kpi-due').textContent = `₹${totalDueThisWeek.toLocaleString('en-IN')}`;
+        if (document.getElementById('kpi-subs')) document.getElementById('kpi-subs').textContent = `₹${activeSubscriptionTotal.toLocaleString('en-IN')} / mo`;
+        if (document.getElementById('kpi-health')) document.getElementById('kpi-health').textContent = `${financialHealth}%`;
 
         // --- Show More/Less Logic ---
         let billsToDisplay = filteredBills;
         const hiddenCount = filteredBills.length > MAX_BILLS_TO_SHOW && activeBillFilter === 'upcoming' && !showAllBills
-             ? filteredBills.length - MAX_BILLS_TO_SHOW : 0;
+            ? filteredBills.length - MAX_BILLS_TO_SHOW : 0;
         if (hiddenCount > 0) billsToDisplay = filteredBills.slice(0, MAX_BILLS_TO_SHOW);
 
         if (showMoreButton) {
             if (activeBillFilter === 'upcoming' && filteredBills.length > MAX_BILLS_TO_SHOW) {
-                 showMoreButton.style.display = 'flex';
-                 showMoreButton.querySelector('#show-more-text').textContent = showAllBills ? 'Show Less' : `Show All Bills (${hiddenCount} more)`;
-                 showMoreButton.querySelector('i').setAttribute('data-feather', showAllBills ? 'chevron-up' : 'chevron-down');
+                showMoreButton.style.display = 'flex';
+                showMoreButton.querySelector('#show-more-text').textContent = showAllBills ? 'Show Less' : `Show All Bills (${hiddenCount} more)`;
+                showMoreButton.querySelector('i').setAttribute('data-feather', showAllBills ? 'chevron-up' : 'chevron-down');
             } else {
-                 showMoreButton.style.display = 'none';
+                showMoreButton.style.display = 'none';
             }
         }
 
@@ -1185,20 +1383,20 @@ function initializeFinancePage() {
             mainBillList.innerHTML = `<li class="placeholder-text">No bills found for filter '${activeBillFilter}'.</li>`;
         } else {
             billsToDisplay.forEach(bill => {
-                 const li = document.createElement('li');
-                 let urgencyClass = bill.paid ? 'completed' : (bill.overdue ? 'overdue' : (bill.dueDays <= 3 ? 'urgent' : ''));
-                 let dueDateText = bill.paid ? 'Paid' : (bill.overdue ? `Overdue by ${Math.abs(bill.dueDays)}d` : (bill.dueDays === 0 ? 'Due Today' : `Due in ${bill.dueDays}d`));
-                 const isPayable = !bill.paid && (bill.overdue || bill.dueDays <= 3); // Payable if overdue or due within 3 days
+                const li = document.createElement('li');
+                let urgencyClass = bill.paid ? 'completed' : (bill.overdue ? 'overdue' : (bill.dueDays <= 3 ? 'urgent' : ''));
+                let dueDateText = bill.paid ? 'Paid' : (bill.overdue ? `Overdue by ${Math.abs(bill.dueDays)}d` : (bill.dueDays === 0 ? 'Due Today' : `Due in ${bill.dueDays}d`));
+                const isPayable = !bill.paid && (bill.overdue || bill.dueDays <= 3); // Payable if overdue or due within 3 days
 
-                 li.className = `bill-item ${urgencyClass}`;
-                 li.dataset.id = bill.id;
-                 li.dataset.link = bill.paymentLink || '#';
+                li.className = `bill-item ${urgencyClass}`;
+                li.dataset.id = bill.id;
+                li.dataset.link = bill.paymentLink || '#';
 
-                 li.innerHTML = `
+                li.innerHTML = `
                     <i data-feather="${bill.icon || 'credit-card'}" class="icon"></i>
                     <div class="details">
                         <p>${bill.name}</p>
-                        <span class="due-date">${dueDateText} (${new Date(bill.dueDate + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC'})})</span>
+                        <span class="due-date">${dueDateText} (${new Date(bill.dueDate + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })})</span>
                     </div>
                     <span class="bill-amount">₹${bill.amount.toLocaleString('en-IN')}</span>
                     <div class="bill-actions">
@@ -1208,10 +1406,10 @@ function initializeFinancePage() {
                         </button>
                     </div>
                  `;
-                 mainBillList.appendChild(li);
+                mainBillList.appendChild(li);
             });
         }
-        try { feather.replace(); } catch (e) {}
+        try { feather.replace(); } catch (e) { }
         console.log("Bill list rendering complete.");
 
         attachBillListeners(); // Re-attach listeners after render
@@ -1299,12 +1497,12 @@ function initializeFinancePage() {
         } catch (error) { console.error(`Failed to ${mode} bill:`, error); }
     });
     document.getElementById('bill-modal-delete-button')?.addEventListener('click', () => {
-         const billId = document.getElementById('bill-id-input').value;
-         const bill = billState.find(b => b.id === billId);
-         if(bill) {
-             addModalControls.hide();
-             showDeleteConfirmModal(bill.id, bill.name);
-         }
+        const billId = document.getElementById('bill-id-input').value;
+        const bill = billState.find(b => b.id === billId);
+        if (bill) {
+            addModalControls.hide();
+            showDeleteConfirmModal(bill.id, bill.name);
+        }
     });
 
     // Delete Confirmation Modal
@@ -1326,15 +1524,15 @@ function initializeFinancePage() {
     function attachBillListeners() {
         console.log("Attaching bill list listeners...");
         mainBillList?.addEventListener('click', (e) => {
-             const editButton = e.target.closest('.edit-button');
-             const payButton = e.target.closest('.pay-button');
-             const billItem = e.target.closest('.bill-item');
-             if (editButton) openEditBillModal(editButton.dataset.id);
-             if (payButton && !payButton.disabled) {
-                 const link = billItem?.dataset.link;
-                 if (link && link !== '#') window.open(link, '_blank');
-                 markBillAsPaid(billItem?.dataset.id);
-             }
+            const editButton = e.target.closest('.edit-button');
+            const payButton = e.target.closest('.pay-button');
+            const billItem = e.target.closest('.bill-item');
+            if (editButton) openEditBillModal(editButton.dataset.id);
+            if (payButton && !payButton.disabled) {
+                const link = billItem?.dataset.link;
+                if (link && link !== '#') window.open(link, '_blank');
+                markBillAsPaid(billItem?.dataset.id);
+            }
         });
     }
 
@@ -1378,11 +1576,11 @@ function initializeFitnessPage() {
         const sleepLastNight = sleepLog.value;
 
         // Update KPIs
-        if(document.getElementById('kpi-steps')) document.getElementById('kpi-steps').textContent = totalStepsToday.toLocaleString();
-        if(document.getElementById('kpi-calories-out')) document.getElementById('kpi-calories-out').textContent = totalCaloriesOutToday.toLocaleString();
-        if(document.getElementById('kpi-workouts')) document.getElementById('kpi-workouts').textContent = workoutsThisWeek;
-        if(document.getElementById('kpi-water')) document.getElementById('kpi-water').textContent = `${totalWaterIntake.toLocaleString()} ml`;
-        if(document.getElementById('kpi-sleep')) document.getElementById('kpi-sleep').textContent = `${sleepLastNight} hr`;
+        if (document.getElementById('kpi-steps')) document.getElementById('kpi-steps').textContent = totalStepsToday.toLocaleString();
+        if (document.getElementById('kpi-calories-out')) document.getElementById('kpi-calories-out').textContent = totalCaloriesOutToday.toLocaleString();
+        if (document.getElementById('kpi-workouts')) document.getElementById('kpi-workouts').textContent = workoutsThisWeek;
+        if (document.getElementById('kpi-water')) document.getElementById('kpi-water').textContent = `${totalWaterIntake.toLocaleString()} ml`;
+        if (document.getElementById('kpi-sleep')) document.getElementById('kpi-sleep').textContent = `${sleepLastNight} hr`;
 
         // Render Suggestions (Marking completed ones)
         document.querySelectorAll('#health-suggestion-list .suggestion-item').forEach(item => {
@@ -1413,7 +1611,7 @@ function initializeFitnessPage() {
                 });
             }
         }
-        try { feather.replace(); } catch(e) {}
+        try { feather.replace(); } catch (e) { }
         console.log("Fitness page rendering complete.");
 
         attachFitnessListeners(); // Re-attach listeners
@@ -1493,7 +1691,7 @@ function initializeFitnessPage() {
             selectedWaterVolume = 0;
             // Disable button only if no quick select is active either
             if (!document.querySelector('#water-quick-select .water-option.active-select')) {
-                 logButton.disabled = true;
+                logButton.disabled = true;
             }
         }
     });
@@ -1526,18 +1724,18 @@ function initializeFitnessPage() {
         const viewLogToggle = document.querySelector('.view-log-toggle');
         if (viewLogToggle && !viewLogToggle.dataset.listenerAttached) { // Prevent duplicate listeners
             viewLogToggle.addEventListener('click', (e) => {
-                 const list = document.getElementById('daily-log-list');
-                 const action = e.currentTarget.dataset.action;
-                 if (action === 'hide') {
+                const list = document.getElementById('daily-log-list');
+                const action = e.currentTarget.dataset.action;
+                if (action === 'hide') {
                     list.style.maxHeight = '0'; list.style.opacity = '0'; list.style.marginTop = '0';
                     e.currentTarget.dataset.action = 'show';
                     e.currentTarget.innerHTML = '<i data-feather="chevron-down"></i> Show Log';
-                 } else {
+                } else {
                     list.style.maxHeight = '250px'; list.style.opacity = '1'; list.style.marginTop = '12px';
                     e.currentTarget.dataset.action = 'hide';
                     e.currentTarget.innerHTML = '<i data-feather="chevron-up"></i> Hide Log';
-                 }
-                 try { feather.replace(); } catch (e) {}
+                }
+                try { feather.replace(); } catch (e) { }
             });
             viewLogToggle.dataset.listenerAttached = 'true';
         }
@@ -1567,11 +1765,11 @@ function initializeMoodPage() {
         let color = stressScore > 75 ? 'var(--c-accent-red)' : (stressScore > 40 ? 'var(--c-accent-yellow)' : 'var(--c-primary)');
 
         // Update KPIs
-        if(document.getElementById('stress-index-value')) {
-             document.getElementById('stress-index-value').textContent = `${stressScore}%`;
-             document.getElementById('stress-index-value').style.color = color;
+        if (document.getElementById('stress-index-value')) {
+            document.getElementById('stress-index-value').textContent = `${stressScore}%`;
+            document.getElementById('stress-index-value').style.color = color;
         }
-        if(document.getElementById('stress-index-label')) document.getElementById('stress-index-label').textContent = stressLevel;
+        if (document.getElementById('stress-index-label')) document.getElementById('stress-index-label').textContent = stressLevel;
 
         // Update "Add Mood Entry" button state based on whether today's final log exists
         const hasLoggedTodayFinal = moodHistory.some(e => e.date === TODAY_DATE && e.isFinal);
@@ -1585,13 +1783,13 @@ function initializeMoodPage() {
         // Render Remedies (Attach listeners separately)
         // ... (No complex rendering needed for remedies, just attach listeners) ...
 
-        try { feather.replace(); } catch(e) {}
+        try { feather.replace(); } catch (e) { }
         console.log("Mood page rendering complete.");
     }; // End of renderMoodPage
 
     // --- Action Handlers (using API) ---
     async function logMoodEntry(moodValue, note) {
-        let currentStress = (moodHistory[0] || {stress: 45}).stress;
+        let currentStress = (moodHistory[0] || { stress: 45 }).stress;
         // Simple stress adjustment based on mood
         let newStress = moodValue < 2 ? Math.min(95, currentStress + 10) : Math.max(10, currentStress - 5);
 
@@ -1665,29 +1863,25 @@ function initializeMoodPage() {
             if (remedyItem.classList.contains('completed')) return; // Skip completed items
 
             newButton.addEventListener('click', (e) => {
-                 const remedyType = remedyItem.dataset.remedy;
-                 const originalText = newButton.textContent; // Store original text before starting timer
-                 let duration = 0;
-                 if (remedyType === 'meditate') duration = 5;
-                 // else if (remedyType === 'read') duration = 15; // Reading is logged, not timed here
+                // (This replaces lines 1547-1562 in script.js)
 
-                 if (activeTimer && duration > 0) return alert("Timer already running!");
+                const remedyType = remedyItem.dataset.remedy;
+                const originalText = newButton.textContent;
+                let duration = 0;
 
-                 if (duration > 0) {
-                     // startTimer(newButton, duration, originalText); // Start timer (meditate)
-                     // Placeholder for timer logic
-                     showFlashMessage(`Starting ${duration} min meditation (mock)...`, 'clock');
-                     newButton.disabled = true;
-                     setTimeout(() => {
-                         markRemedyComplete(newButton, originalText, 'timer');
-                         activeTimer = null;
-                     }, 1000); // Short mock timer
-                 } else {
-                     // markRemedyComplete(newButton, originalText, 'log'); // Log break/read
-                     // Placeholder for logging
-                     showFlashMessage(`${remedyType === 'break' ? 'Break' : 'Reading'} logged (mock).`, 'check');
-                     markRemedyComplete(newButton, originalText, 'log');
-                 }
+                if (remedyType === 'meditate') {
+                    // Extract duration from the <p> tag's text, e.g., "Meditate 5 mins."
+                    const remedyText = remedyItem.querySelector('p')?.textContent || '';
+                    duration = parseInt(remedyText.match(/\d+/)[0] || 5);
+                }
+
+                if (duration > 0) {
+                    // This is a timed event (meditation)
+                    startTimer(newButton, duration, originalText);
+                } else {
+                    // This is an instant log event (break, read)
+                    markRemedyComplete(newButton, originalText, 'log');
+                }
             });
         });
     }
@@ -1736,14 +1930,14 @@ function initializeVaultPage() {
             mainVaultGrid.innerHTML = `<div id="vault-empty-message" style="text-align: center; color: var(--c-text-muted); padding: 20px; grid-column: 1 / -1;">No links found matching criteria.</div>`;
         } else {
             filteredAssets.forEach(asset => {
-                 const item = document.createElement('div');
-                 item.className = 'vault-item';
-                 item.dataset.id = asset.id;
-                 item.dataset.url = asset.url;
-                 // Add class if it can trigger task scheduler
-                 if (asset.type === 'Dev' || asset.type === 'Video' || asset.type === 'Creative') item.classList.add('action-task');
+                const item = document.createElement('div');
+                item.className = 'vault-item';
+                item.dataset.id = asset.id;
+                item.dataset.url = asset.url;
+                // Add class if it can trigger task scheduler
+                if (asset.type === 'Dev' || asset.type === 'Video' || asset.type === 'Creative') item.classList.add('action-task');
 
-                 item.innerHTML = `
+                item.innerHTML = `
                     <div class="context-menu">
                         <button class="edit-asset-button" data-id="${asset.id}" title="Edit"><i data-feather="edit-2" style="width: 16px;"></i></button>
                         <button class="delete-asset-button" data-id="${asset.id}" title="Delete"><i data-feather="x" style="width: 16px;"></i></button>
@@ -1752,7 +1946,7 @@ function initializeVaultPage() {
                     <p>${asset.name}</p>
                     <span>${asset.type}</span>
                  `;
-                 mainVaultGrid.appendChild(item);
+                mainVaultGrid.appendChild(item);
             });
         }
         // Add the "Add New" tile dynamically
@@ -1762,7 +1956,7 @@ function initializeVaultPage() {
         addTile.innerHTML = `<i data-feather="plus-circle"></i><p>Add Link</p><span></span>`;
         mainVaultGrid.appendChild(addTile);
 
-        try { feather.replace(); } catch (e) {}
+        try { feather.replace(); } catch (e) { }
         console.log("Assets rendering complete.");
         attachAssetListeners(); // Re-attach listeners
     }; // End of renderAssets
@@ -1826,13 +2020,13 @@ function initializeVaultPage() {
             await refreshState('assets');
         } catch (error) { console.error(`Failed to ${mode} asset:`, error); }
     });
-     document.getElementById('asset-modal-delete-button')?.addEventListener('click', () => {
-         const assetId = document.getElementById('asset-id-input').value;
-         const asset = assetState.find(a => a.id === assetId);
-         if(asset) {
-             assetModalControls.hide();
-             showDeleteConfirmModal(asset.id, asset.name);
-         }
+    document.getElementById('asset-modal-delete-button')?.addEventListener('click', () => {
+        const assetId = document.getElementById('asset-id-input').value;
+        const asset = assetState.find(a => a.id === assetId);
+        if (asset) {
+            assetModalControls.hide();
+            showDeleteConfirmModal(asset.id, asset.name);
+        }
     });
 
     // Delete Confirmation Modal
@@ -1885,22 +2079,22 @@ function initializeVaultPage() {
             if (addTile) return assetModalControls.show(); // Handled by setupModal trigger
             if (editButton) return openEditAssetModal(editButton.dataset.id);
             if (deleteButton) {
-                 const asset = assetState.find(a => a.id === deleteButton.dataset.id);
-                 if (asset) return showDeleteConfirmModal(asset.id, asset.name);
+                const asset = assetState.find(a => a.id === deleteButton.dataset.id);
+                if (asset) return showDeleteConfirmModal(asset.id, asset.name);
             }
             // If clicked on item itself (not buttons)
             if (item) {
-                 const assetId = item.dataset.id;
-                 const asset = assetState.find(a => a.id === assetId);
-                 if (!asset) return;
+                const assetId = item.dataset.id;
+                const asset = assetState.find(a => a.id === assetId);
+                if (!asset) return;
 
-                 if (item.classList.contains('action-task')) {
-                     currentModalAsset = asset;
-                     openTaskSchedulerModal();
-                 } else {
-                     if (asset.url) window.open(asset.url, '_blank');
-                     showFlashMessage(`Launching ${asset.name}...`, 'link');
-                 }
+                if (item.classList.contains('action-task')) {
+                    currentModalAsset = asset;
+                    openTaskSchedulerModal();
+                } else {
+                    if (asset.url) window.open(asset.url, '_blank');
+                    showFlashMessage(`Launching ${asset.name}...`, 'link');
+                }
             }
         });
     }
@@ -1948,7 +2142,7 @@ function initializeSettingsPage() {
             logoutButton.style.width = '100%';
             logoutButton.style.marginTop = '20px'; // Space from "Save" button
             profileCard.appendChild(logoutButton); // Append to the profile card
-            try { feather.replace(); } catch (e) {}
+            try { feather.replace(); } catch (e) { }
         }
         logoutButton.removeEventListener('click', logout); // Prevent duplicates
         logoutButton.addEventListener('click', logout); // Attach logout function
@@ -1958,22 +2152,28 @@ function initializeSettingsPage() {
     const populateProfile = async () => {
         if (!auth0 || !(await auth0.isAuthenticated())) {
             console.warn("Settings: User not authenticated.");
-            if(document.getElementById('profile-name-input')) document.getElementById('profile-name-input').value = 'Not logged in';
-            if(document.getElementById('profile-email-input')) document.getElementById('profile-email-input').value = '';
+            if (document.getElementById('profile-name-input')) document.getElementById('profile-name-input').value = 'Not logged in';
+            if (document.getElementById('profile-email-input')) document.getElementById('profile-email-input').value = '';
             return;
         }
         console.log("Settings: Populating profile...");
         try {
             const user = await auth0.getUser();
             if (user) {
-                if(document.getElementById('profile-name-input')) document.getElementById('profile-name-input').value = user.name || user.nickname || '';
-                if(document.getElementById('profile-email-input')) {
-                     document.getElementById('profile-email-input').value = user.email || '';
-                     document.getElementById('profile-email-input').disabled = true; // Email managed by Auth0
+                if (document.getElementById('profile-name-input')) document.getElementById('profile-name-input').value = user.name || user.nickname || '';
+                if (document.getElementById('profile-email-input')) {
+                    document.getElementById('profile-email-input').value = user.email || '';
+                    document.getElementById('profile-email-input').disabled = true; // Email managed by Auth0
                 }
                 // Update profile picture globally as well
-                 const profilePic = document.querySelector('.profile-pic');
-                 if(profilePic && user.picture) profilePic.src = user.picture;
+                const profilePic = document.querySelector('.profile-pic');
+                if (profilePic && user.picture) {
+                    profilePic.src = user.picture;
+                    // Add error handler
+                    profilePic.onerror = () => generateInitials(user.name, profilePic);
+                } else if (profilePic && user.name) {
+                    generateInitials(user.name, profilePic);
+                }
             }
         } catch (err) { console.error("Error fetching user profile:", err); }
     };
@@ -1987,11 +2187,11 @@ function initializeSettingsPage() {
     const deleteDataButton = document.getElementById('delete-data-button');
     const deleteDataConfirmModal = document.getElementById('delete-data-confirm-modal');
     if (deleteDataButton && deleteDataConfirmModal) {
-         const deleteModalControls = setupModal(deleteDataConfirmModal, ['#delete-data-button'], ['#delete-data-cancel-button']);
-         document.getElementById('delete-data-confirm-button')?.addEventListener('click', () => {
+        const deleteModalControls = setupModal(deleteDataConfirmModal, ['#delete-data-button'], ['#delete-data-cancel-button']);
+        document.getElementById('delete-data-confirm-button')?.addEventListener('click', () => {
             showFlashMessage('Simulating data deletion...', 'trash-2');
             deleteModalControls.hide();
-         });
+        });
     }
     // ... (Add mock import/export listeners if needed) ...
 
@@ -2005,7 +2205,7 @@ function initializeSettingsPage() {
 (async () => {
     console.log("DOM Loaded. Starting App Initialization...");
 
-    // Ensure flash message container exists
+    // Ensure flash message container exists (safe to run on all pages)
     if (!document.getElementById('flash-message-container')) {
         const container = document.createElement('div');
         container.id = 'flash-message-container';
@@ -2013,80 +2213,113 @@ function initializeSettingsPage() {
         document.body.appendChild(container);
     }
 
-    // --- Phase 1: Auth Setup ---
+    // --- Phase 1: Auth Setup (Run on ALL pages) ---
     console.log("Phase 1: Initializing Auth...");
     await configureClient();
     if (!auth0) { console.error("STOPPING: Auth0 client failed."); return; }
 
-    // --- Phase 2: Handle Callback ---
+    // --- Phase 2: Handle Callback (Run on ALL pages) ---
+    // This is critical. The callback might be on index.html.
     console.log("Phase 2: Handling Auth Callback...");
     const callbackProcessed = await handleAuthCallback();
-    // If callback failed critically, handleAuthCallback shows alert/redirects
+
+    // Check for a failed callback (which returns false)
     if (callbackProcessed === false && window.location.search.includes("code=")) {
-        console.log("Callback handling failed/redirected. Halting."); return;
+        // This happens if handleRedirectCallback() fails (e.g., bad state)
+        console.error("Callback handling failed. Halting.");
+        // We show an error *on the page* instead of just halting.
+        document.body.innerHTML = `<h1>Authentication Error</h1><p>Login callback failed. This can be due to an 'invalid state' error. Please try signing in again from the login page.</p><a href="/login.html">Go to Login</a>`;
+        return;
     }
 
-    // --- Phase 3: Auth Guard ---
-    console.log("Phase 3: Checking Auth Requirement...");
-    const isAuthenticated = await requireAuth();
-    if (!isAuthenticated && !window.location.pathname.endsWith('/login.html')) {
-        console.log("Auth redirect initiated. Halting."); return;
-    }
-
-    // --- Phase 4: Core UI Setup ---
-    console.log("Phase 4: Setting up Global UI...");
     const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-    // Nav Highlighting & Listeners
-    document.querySelectorAll('.menu-item').forEach(item => {
-        const page = item.dataset.page;
-        item.classList.toggle('active', page === currentPage);
-        item.addEventListener('click', (e) => {
-             e.preventDefault();
-             if (page && page !== currentPage) window.location.href = '/' + page; // Use root-relative paths
-        });
-    });
-    // Clock
-    const timeElement = document.getElementById('current-time');
-    const updateClock = () => { if(timeElement) timeElement.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'}); };
-    updateClock(); setInterval(updateClock, 30000);
-    // Profile Pic (Initial, updated in Settings)
-    const profilePic = document.querySelector('.profile-pic');
-    if (auth0 && await auth0.isAuthenticated()) {
-         try { const user = await auth0.getUser(); if(profilePic && user?.picture) profilePic.src = user.picture; } catch(e){}
-    }
-    console.log("Global UI setup complete.");
 
-    // --- Phase 5: Data Loading ---
-    console.log("Phase 5: Loading App Data...");
-    if (auth0 && await auth0.isAuthenticated() && currentPage !== 'login.html') {
+    // --- LOGIC FORK: Are we on the login page or a protected app page? ---
+    if (currentPage === 'login.html') {
+
+        // --- We are on the LOGIN PAGE ---
+        console.log("Initializing Login Page logic...");
+        initializeLoginPage(); // Run *only* the login page function
+        try { feather.replace(); } catch (e) { } // Run icons for login page
+
+    } else {
+
+        // --- We are on a PROTECTED PAGE (e.g., index.html, tasks.html) ---
+
+        // --- Phase 3: Auth Guard ---
+        console.log("Phase 3: Checking Auth Requirement...");
+        const isAuthenticated = await requireAuth();
+        if (!isAuthenticated) {
+            // requireAuth() handles the redirect, so we just halt.
+            console.log("Auth redirect initiated. Halting script for this page load.");
+            return;
+        }
+
+        // --- Phase 4: Core UI Setup ---
+        console.log("Phase 4: Setting up Global UI...");
+        // Nav Highlighting & Listeners
+        document.querySelectorAll('.menu-item').forEach(item => {
+            const page = item.dataset.page;
+            item.classList.toggle('active', page === currentPage);
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (page && page !== currentPage) window.location.href = '/' + page;
+            });
+        });
+        // Clock
+        const timeElement = document.getElementById('current-time');
+        const updateClock = () => { if (timeElement) timeElement.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); };
+        updateClock();
+        setInterval(updateClock, 30000); // Update every 30s
+        // Profile Pic
+        const profilePic = document.querySelector('.profile-pic');
+        try {
+            const user = await auth0.getUser();
+            if (profilePic && user?.picture) {
+                profilePic.src = user.picture;
+                // Add an error handler in case the src link fails (like the 429 error)
+                profilePic.onerror = () => generateInitials(user.name, profilePic);
+            } else if (profilePic && user?.name) {
+                // Fallback if they have no picture at all
+                generateInitials(user.name, profilePic);
+            }
+        } catch (e) { console.warn("Couldn't fetch user for profile pic.", e); }
+        console.log("Global UI setup complete.");
+
+        // Notification Bell
+        const bellIcon = document.querySelector('.global-controls .control-icon-wrapper');
+        bellIcon?.addEventListener('click', toggleNotificationPanel);
+
+        // --- Phase 5: Data Loading ---
+        console.log("Phase 5: Loading App Data...");
         try {
             await syncApplicationState();
         } catch (error) { console.error('Error during initial data sync:', error.message); }
-    } else { console.log("Skipping data sync (Not authenticated or on login page)."); }
 
-    // --- Phase 6: Page-Specific Init ---
-    console.log("Phase 6: Initializing page logic for:", currentPage);
-    try {
-        switch (currentPage) {
-            case 'index.html': initializeDashboardPage(); break;
-            case 'tasks.html': initializeTasksPageLogic(); break;
-            case 'finance.html': initializeFinancePage(); break;
-            case 'fitness.html': initializeFitnessPage(); break;
-            case 'mood.html': initializeMoodPage(); break;
-            case 'vault.html': initializeVaultPage(); break;
-            case 'insights.html': initializeInsightsPage(); break;
-            case 'settings.html': initializeSettingsPage(); break;
-            case 'login.html': console.log("Login page logic in HTML."); break;
-            default: console.warn("No init function for page:", currentPage);
+        // --- Phase 6: Page-Specific Init ---
+        console.log("Phase 6: Initializing page logic for:", currentPage);
+        try {
+            switch (currentPage) {
+                case 'index.html': initializeDashboardPage(); break;
+                case 'tasks.html': initializeTasksPageLogic(); break;
+                case 'finance.html': initializeFinancePage(); break;
+                case 'fitness.html': initializeFitnessPage(); break;
+                case 'mood.html': initializeMoodPage(); break;
+                case 'vault.html': initializeVaultPage(); break;
+                case 'insights.html': initializeInsightsPage(); break;
+                case 'settings.html': initializeSettingsPage(); break;
+                // 'login.html' is handled above
+                default: console.warn("No init function for page:", currentPage);
+            }
+        } catch (pageInitError) {
+            console.error(`Error initializing ${currentPage}:`, pageInitError);
+            showFlashMessage(`Error setting up ${currentPage}.`, 'alert-triangle');
         }
-    } catch (pageInitError) {
-        console.error(`Error initializing ${currentPage}:`, pageInitError);
-        showFlashMessage(`Error setting up ${currentPage}.`, 'alert-triangle');
+
+        // --- Phase 7: Final Icon Render ---
+        console.log("Phase 7: Rendering Feather Icons...");
+        try { feather.replace(); } catch (e) { console.error("Feather replace failed:", e); }
     }
 
-    // --- Phase 7: Final Icon Render ---
-    console.log("Phase 7: Rendering Feather Icons...");
-    try { feather.replace(); } catch (e) { console.error("Feather replace failed:", e); }
-
     console.log("✨ App Initialization Complete ✨");
-})(); // End main async function
+})();

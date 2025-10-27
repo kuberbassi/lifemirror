@@ -27,8 +27,9 @@ router.get('/all', async (req, res) => {
             MoodLog.find({ auth0Id }).select('-auth0Id -__v').sort({ date: -1 })
         ]);
 
+        
         // Create a placeholder mood entry if one doesn't exist for today
-        let latestMood = moodLogs[0];
+        let latestMood = moodLogs.length > 0 ? moodLogs[0] : null;
         if (!latestMood || (latestMood.date !== TODAY_DATE)) {
             const placeholder = {
                 _id: 'temp-mood',
