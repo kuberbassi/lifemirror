@@ -19,7 +19,7 @@ const TODAY_DATE = getTodayDateString(); // Dynamic date for today
 
 
 // --- TASKS STATE (Global for all Task/Dashboard pages) ---
-// CRITICAL FIX: Initialize as an empty array to be populated from MongoDB API
+// CRITICAL FIX: Initialize as an empty array to be populated from MongoDB
 let taskState = [];
 
 // --- FITNESS STATE (Global for all Fitness/Dashboard pages) ---
@@ -68,23 +68,57 @@ const MOCK_CLERK_USER = {
 };
 
 // ===============================================
-// NEW: MONGODB/API SERVICE LAYER
+// NEW: MONGODB/API SERVICE LAYER & AUTH FIX
 // ===============================================
 
 /**
+ * Global function to retrieve the access token for the API.
+ * This is the core fix for the 401 Unauthorized error.
+ * NOTE: This mocks the behavior of the Auth0 SPA SDK.
+ */
+async function getAccessToken() {
+    // We assume Auth0 is loaded globally via the included script tag.
+    if (window.auth0) {
+        // In a real scenario, this would use the actual Auth0 client to get the token:
+        // const auth0Client = await createAuth0Client({ ... config ... });
+        // return await auth0Client.getTokenSilently();
+        
+        // Since we are mocking, we return a mock JWT if we assume the user is "logged in"
+        // (based on the Clerk state which we are also mocking as the main auth provider)
+        if (window.Clerk?.user?.id) {
+             // Mock token structure: "header.payload.signature"
+             // The payload is what the server checks. We mock the payload 'sub' field to be the clerk user ID.
+             const mockPayload = btoa(JSON.stringify({ sub: window.Clerk.user.id, aud: 'your_api_identifier' }));
+             return `mock_header.${mockPayload}.mock_signature`;
+        }
+    }
+    return null;
+}
+
+/**
  * Handles all secure asynchronous API interactions for Tasks.
- * This abstracts local array modifications behind API calls.
  */
 const taskApiService = {
-    // NOTE: For a real app, you would need to retrieve the Auth0 token (JWT) 
-    // from the Auth0 SPA SDK and include it in the Authorization header for every request. 
-    // We assume the fetch calls inherently handle this for the prototype context.
-    
     async fetchTasks() {
+        const token = await getAccessToken();
+        if (!token) {
+            console.warn('Authentication token not available. Cannot fetch tasks.');
+            return []; // Return empty array if not authenticated
+        }
+
         try {
-            const response = await fetch('/api/tasks');
+            const response = await fetch('/api/tasks', {
+                headers: { 
+                    'Authorization': `Bearer ${token}` // CRITICAL: Includes the JWT in the header
+                }
+            });
+            if (response.status === 401) {
+                // Explicitly log and return empty array on Unauthorized
+                console.error('API Error (fetchTasks): Unauthorized access to /api/tasks.');
+                showFlashMessage('Authentication failed. Please sign in to load tasks.', 'alert-triangle');
+                return [];
+            }
             if (!response.ok) {
-                // Handle 401 Unauthorized or other server errors
                 throw new Error(`Failed to fetch tasks: ${response.statusText}`);
             }
             return await response.json();
@@ -99,6 +133,12 @@ const taskApiService = {
     },
 
     async createTask(taskData) {
+        const token = await getAccessToken();
+        if (!token) {
+            showFlashMessage('Sign in required to create tasks.', 'lock');
+            throw new Error('Unauthorized');
+        }
+        
         const payload = {
             ...taskData,
             priority: taskData.priority || 'medium',
@@ -107,7 +147,10 @@ const taskApiService = {
 
         const response = await fetch('/api/tasks', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify(payload)
         });
         if (!response.ok) {
@@ -118,9 +161,18 @@ const taskApiService = {
     },
 
     async updateTask(taskId, updateData) {
+        const token = await getAccessToken();
+        if (!token) {
+             showFlashMessage('Sign in required to update tasks.', 'lock');
+             throw new Error('Unauthorized');
+        }
+
         const response = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify(updateData)
         });
         if (!response.ok) {
@@ -131,8 +183,17 @@ const taskApiService = {
     },
 
     async deleteTask(taskId) {
+        const token = await getAccessToken();
+        if (!token) {
+             showFlashMessage('Sign in required to delete tasks.', 'lock');
+             throw new Error('Unauthorized');
+        }
+
         const response = await fetch(`/api/tasks/${taskId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 
+                'Authorization': `Bearer ${token}` 
+            }
         });
         if (!response.ok) {
             const error = await response.json();
@@ -164,11 +225,6 @@ async function syncTaskState(forceRenderDashboard = false) {
     }
     
     // Re-render affected components based on current page
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-    
-    // Note: Since renderTaskList is only defined inside initializeTasksPageLogic, 
-    // we use a flag or re-call the initialization, or we check for its existence.
-    // For this prototype, we rely on the caller to handle the local render update after sync.
     
     if (document.getElementById('dashboard-grid') || forceRenderDashboard) {
         // This relies on renderDashboardMetrics being in scope, which it is globally.
@@ -178,7 +234,7 @@ async function syncTaskState(forceRenderDashboard = false) {
     }
 }
 
-// --- GENERAL HELPER FUNCTIONS ---
+// --- GENERAL HELPER FUNCTIONS (UNCHANGED) ---
 function updateUserProfileUI() {
     const profilePic = document.querySelector('.profile-pic');
     
@@ -285,8 +341,9 @@ function renderNotificationPanel(panel) {
     const lowSleep = fitnessHistory.find(log => log.type === 'sleep' && log.value < 6);
 
     // CRITICAL: This now uses the globally synced taskState
-    const projectReportTask = taskState.find(t => t.text.includes('Project Report') && !t.completed);
+    const projectReportTask = taskState.find(t => t.text.includes('Finalize project report') && !t.completed);
     const projectReportDueTomorrow = projectReportTask ? (calculateDueDays(projectReportTask.date) === 1) : false;
+
 
     const activeNotifications = [
         { id: 1, type: 'critical', message: `Overdue: ${overdueBill}. Pay Now!`, link: 'finance.html', icon: 'alert-triangle', active: !!billState.find(b => b.overdue && !b.paid) },
@@ -655,9 +712,7 @@ function renderDashboardMetrics() {
                         // CRITICAL FIX: Update via API and sync state
                         await taskApiService.updateTask(taskId, { completed: isChecked });
                         const scoreChange = isChecked ? 3 : -3;
-                        // The function call below relies on the outer scope of initializeDashboardPage
-                        // updateLifeScore(scoreChange); 
-
+                        
                         await syncTaskState();
                         if (typeof updateLifeScore === 'function') {
                              updateLifeScore(scoreChange);
@@ -1327,7 +1382,7 @@ function initializeTasksPageLogic() {
     initialLoad();
 
     // --- 6. CLERK/CALENDAR INITIALIZATION ---
-    const signInButton = document.getElementById('clerk-signin-button'); // RENAMED ID
+    const signInButton = document.getElementById('clerk-open-signin'); // Use correct button ID from tasks.html
     const overlay = document.getElementById('clerk-signin-overlay');
 
     // MOCK function to initialize calendar (relies on FullCalendar being loaded)
@@ -1365,7 +1420,10 @@ function initializeTasksPageLogic() {
     
     // MOCK function to check access when auth state changes
     function checkCalendarAccess() {
-        if (IS_CLERK_SIGNED_IN) {
+        // We link IS_CLERK_SIGNED_IN to the presence of a Clerk user (mocking the Auth0/Clerk integration status)
+        const isUserSigned = (window.Clerk && window.Clerk.user?.id) || IS_CLERK_SIGNED_IN;
+        
+        if (isUserSigned) {
             tryInitializeCalendar();
         } else {
             const calendarEl = document.getElementById('calendar');
@@ -1375,9 +1433,9 @@ function initializeTasksPageLogic() {
     }
 
 
-    if (signInButton) { // Ensure correct ID check
+    if (signInButton) { 
         signInButton.addEventListener('click', () => {
-            IS_CLERK_SIGNED_IN = true; // CHANGED STATE
+            IS_CLERK_SIGNED_IN = true; // MOCK state update
             if (overlay) overlay.style.display = 'none';
 
             // Simulating API call/redirect completion
@@ -3422,7 +3480,7 @@ document.addEventListener('DOMContentLoaded', () => {
             initializeFinancePage();
             break;
         case 'fitness.html':
-            initializeFitnessPage();a
+            initializeFitnessPage();
             break;
         case 'mood.html':
             initializeMoodPage();

@@ -2,3 +2,15 @@
 node_modules
 package-lock.json
 package.json
+dist
+.DS_Store
+.vscode
+.idea
+*.log
+coverage
+*.sqlite
+*.sqlite3
+*.bak
+*.swp
+*.tmp
+*.old
