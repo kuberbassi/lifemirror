@@ -47,18 +47,6 @@ app.use(express.json());
 // 2.5. Static Frontend Server
 // =======================================================
 
-// 1. Serve specific vendor scripts first
-// This ensures the request for the Auth0 SDK is handled correctly
-// before the general static middleware.
-app.get('/vendor/auth0-spa-js.production.js', (req, res) => {
-    const auth0SdkPath = path.join(__dirname, 'node_modules', '@auth0', 'auth0-spa-js', 'dist', 'auth0-spa-js.production.js');
-    res.type('application/javascript').sendFile(auth0SdkPath, (err) => {
-        if (err) {
-            console.error(`Auth0 SDK file not found at path: ${auth0SdkPath}. Did you run 'npm install @auth0/auth0-spa-js'?`);
-            res.status(404).send('Auth0 SDK file not found.');
-        }
-    });
-});
 
 // 2. Serve the 'assets' folder (for your favicon)
 // This makes files in the 'assets' directory available at '/assets'

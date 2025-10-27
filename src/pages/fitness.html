@@ -9,73 +9,15 @@
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
-    <script src="/vendor/auth0-spa-js.production.js"></script>
 
 <body>
 
     <div id="flash-message-container"></div>
 
-    <div class="modal-overlay" id="log-activity-modal" style="display: none;">
-        <div class="modal-dialog" style="max-width: 450px;">
-            <h3>Add New Activity Entry</h3>
 
-            <div class="modal-form-group">
-                <label for="activity-type-select">Activity Type</label>
-                <select id="activity-type-select">
-                    <option value="steps">Steps</option>
-                    <option value="workout">Workout (Minutes)</option>
-                    <option value="sleep">Sleep (Hours)</option>
-                    <option value="calories_out">Calories Burned (Estimated)</option>
-                </select>
-            </div>
-
-            <div class="modal-form-row">
-                <div class="modal-form-group">
-                    <label for="activity-value-input" id="activity-value-label">Value</label>
-                    <input type="number" id="activity-value-input" placeholder="e.g., 5000" min="1">
-                </div>
-                <div class="modal-form-group">
-                    <label for="activity-unit-label">Unit</label>
-                    <input type="text" id="activity-unit-label" value="steps" disabled>
-                </div>
-            </div>
-
-            <div class="modal-actions">
-                <button class="modal-button secondary" id="activity-modal-cancel-button">Cancel</button>
-                <button class="modal-button" id="activity-modal-log-button">Log Data</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="log-water-modal" style="display: none;">
-        <div class="modal-dialog" style="max-width: 400px;">
-            <h3>Log Water Intake</h3>
-
-            <div class="modal-form-group">
-                <label>Quick Log Options (ml)</label>
-                <div id="water-quick-select"
-                    style="display: flex; gap: 10px; justify-content: center; margin-top: 8px;">
-                    <button class="modal-button secondary water-option" data-volume="250">250 ml</button>
-                    <button class="modal-button secondary water-option" data-volume="500">500 ml</button>
-                    <button class="modal-button secondary water-option" data-volume="750">750 ml</button>
-                </div>
-            </div>
-
-            <div class="modal-form-group">
-                <label for="water-custom-input" style="margin-top: 15px;">Or Enter Custom Volume (ml)</label>
-                <input type="number" id="water-custom-input" placeholder="e.g., 600" min="1">
-            </div>
-
-            <div class="modal-actions">
-                <button class="modal-button secondary" id="water-modal-cancel-button">Cancel</button>
-                <button class="modal-button" id="water-modal-log-button" disabled>Log Intake</button>
-            </div>
-        </div>
-    </div>
 
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
@@ -144,16 +86,11 @@
 
             <div class="card fitness-trends">
                 <h3>7-Day Trends</h3>
-                <div class="chart-placeholder-large chart-visual">
-                    <i data-feather="bar-chart-2"></i>
-                    <span>Trend Chart (Data simulation needed)</span>
-                    <div class="chart-bars">
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                    </div>
+                <div class="chart-container" style="height: 250px;"> <canvas id="fitness-trend-chart"></canvas>
+                </div>
+                <div class="chart-placeholder-large" id="fitness-chart-placeholder"
+                    style="display: none; height: 250px;"> <i data-feather="bar-chart-2"></i>
+                    <span>Loading Trend Chart...</span>
                 </div>
             </div>
 

@@ -9,27 +9,14 @@
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
-    <script src="/vendor/auth0-spa-js.production.js"></script>
 </head>
 
 <body>
 
-    <div class="modal-overlay" id="delete-data-confirm-modal" style="display: none;">
-        <div class="modal-dialog" style="max-width: 400px; text-align: center;">
-            <h3 style="color: var(--c-accent-red); margin-bottom: 8px;"><i data-feather="alert-triangle"
-                    style="width: 24px; height: 24px;"></i> Confirm Data Destruction</h3>
-            <p style="margin-bottom: 24px; color: var(--c-text-dark);">This will erase **ALL** your tasks, bills, mood
-                history, and links. This cannot be undone.</p>
-            <div class="modal-actions" style="justify-content: space-between; margin-top: 0;">
-                <button class="modal-button secondary" id="delete-data-cancel-button">Cancel</button>
-                <button class="modal-button delete" id="delete-data-confirm-button">Erase Data</button>
-            </div>
-        </div>
-    </div>
+    
 
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>

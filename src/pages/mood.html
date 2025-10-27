@@ -9,44 +9,14 @@
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
-    <script src="/vendor/auth0-spa-js.production.js"></script>
 </head>
 
 <body>
 
-    <div class="modal-overlay" id="add-mood-modal" style="display: none;">
-        <div class="modal-dialog" style="max-width: 450px;">
-            <h3>Log Your Mood Entry</h3>
-            <div class="modal-form-group" style="text-align: center;">
-                <label for="mood-select">How do you feel right now?</label>
-                <div id="mood-selector"
-                    style="display: flex; justify-content: space-around; font-size: 32px; margin-top: 10px;">
-                    <span data-mood="awful" title="Awful" style="cursor: pointer;">😞</span>
-                    <span data-mood="sad" title="Sad" style="cursor: pointer;">🙁</span>
-                    <span data-mood="neutral" title="Neutral" style="cursor: pointer;">😐</span>
-                    <span data-mood="happy" title="Happy" style="cursor: pointer;">🙂</span>
-                    <span data-mood="great" title="Great" style="cursor: pointer;">😄</span>
-                </div>
-                <input type="hidden" id="current-mood-value">
-            </div>
-            <p id="selected-mood-label"
-                style="text-align: center; font-weight: 600; color: var(--c-primary); margin-top: 15px;">Neutral</p>
 
-            <div class="modal-form-group">
-                <label for="mood-notes-input">Quick Note (Optional)</label>
-                <input type="text" id="mood-notes-input" placeholder="e.g., Stressed about project deadline.">
-            </div>
-
-            <div class="modal-actions">
-                <button class="modal-button secondary" id="mood-modal-cancel-button">Cancel</button>
-                <button class="modal-button" id="mood-modal-add-button">Log Entry</button>
-            </div>
-        </div>
-    </div>
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
         <ul class="sidebar-menu" id="sidebar-menu">
@@ -92,8 +62,11 @@
 
             <div class="card" style="grid-column: span 2;">
                 <h3>Mood Trend</h3>
-                <div class="chart-placeholder-large">
-                    <p>Emoji-based line graph showing mood over time</p>
+                <div class="chart-container" style="height: 200px;"> <canvas id="mood-trend-chart"></canvas>
+                </div>
+                <div class="chart-placeholder-large" id="mood-chart-placeholder" style="display: none; height: 200px;">
+                    <i data-feather="trending-up"></i>
+                    <span>Loading Mood Chart...</span>
                 </div>
             </div>
 

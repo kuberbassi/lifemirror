@@ -11,7 +11,6 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
-    <script src="/vendor/auth0-spa-js.production.js"></script>
 </head>
 
 <body>
@@ -71,15 +70,10 @@
 
             <div class="card" style="grid-column: span 2;">
                 <h3>Weekly Summary Charts</h3>
-                <div class="chart-placeholder-large chart-visual">
-                    <p>Weekly Trends</p>
-                    <div class="chart-bars">
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                    </div>
+                <div class="chart-container" style="height: 250px;"> <canvas id="insights-trend-chart"></canvas> </div>
+                <div class="chart-placeholder-large" id="insights-chart-placeholder"
+                    style="display: none; height: 250px;"> <i data-feather="bar-chart-2"></i>
+                    <span>Loading Insights Chart...</span>
                 </div>
             </div>
 
