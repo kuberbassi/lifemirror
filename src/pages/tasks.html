@@ -13,7 +13,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
-    <script src="https://cdn.auth0.com/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    <script src="/vendor/auth0-spa-js.production.js"></script>
 </head>
 
 <body>
@@ -147,13 +147,13 @@
             <div class="card" style="grid-column: span 1; padding: 12px;">
                 <div id="calendar-feature-container">
                     <div id="calendar" style="height: 100%;"></div>
-                    <div id="clerk-signin-overlay"
+                    <div id="auth-signin-overlay"
                         style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; border-radius: 12px;">
                         <i data-feather="calendar" style="width: 32px; height: 32px; color: var(--c-accent-blue);"></i>
                         <h3 style="margin: 15px 0 10px 0;">Sync Your Schedule</h3>
                         <p style="text-align: center; color: var(--c-text-muted); max-width: 80%; margin-bottom: 20px;">
-                            Sign in to link your external calendar and view events.</p>
-                        <button class="add-new-button secondary" id="clerk-open-signin">
+                            Sign in to view your schedule.</p>
+                        <button class="add-new-button secondary" id="auth-open-signin">
                             <i data-feather="lock"></i> Sign In to Unlock
                         </button>
                     </div>

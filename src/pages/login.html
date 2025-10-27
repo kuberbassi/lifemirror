@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - LifeMirror 3.0</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
+        rel="stylesheet">
+    </head>
+
+<body style="display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--c-bg-main);">
+
+    <div class="card" style="max-width: 400px; padding: 40px; text-align: center; border-radius: 20px;">
+        <div class="sidebar-logo" style="margin: 0 auto 20px auto;">
+            <i data-feather="feather"></i>
+        </div>
+        <h2 style="font-size: 28px; margin: 0 0 10px 0;">Welcome to LifeMirror</h2>
+        <p style="color: var(--c-text-muted); margin-bottom: 30px;">Sign in to securely access your data.</p>
+
+        <div id="auth-widget">
+            <button id="login-button" class="add-new-button" style="width: 100%;">
+                <i data-feather="log-in"></i> Sign In / Sign Up
+            </button>
+        </div>
+
+        <p id="loading-message" style="font: var(--font-caption); color: var(--c-text-muted); margin-top: 20px; display: none;">
+            Redirecting to login...
+        </p>
+    </div>
+
+    <script>feather.replace()</script>
+
+    <script>
+        // --- Configuration (Keep these consistent with your script.js and backend .env) ---
+        const AUTH0_DOMAIN = 'kuberbassi.us.auth0.com';
+        const AUTH0_CLIENT_ID = 'nXisVu6Vmw1MI9xG2K0Uubupg1DNhx26';
+        const AUTH0_AUDIENCE = 'https://lifemirror-api.com';
+        // The URL Auth0 should send the user back to AFTER successful login
+        const REDIRECT_URI = window.location.origin + '/index.html';
+
+        // --- Login Button Logic ---
+        const loginButton = document.getElementById('login-button');
+        const loadingMessage = document.getElementById('loading-message');
+
+        loginButton.addEventListener('click', () => {
+            loadingMessage.style.display = 'block'; // Show redirect message
+            loginButton.disabled = true;
+
+            // Construct the Auth0 Universal Login URL
+            const authorizeUrl = `https://${AUTH0_DOMAIN}/authorize?` +
+                `response_type=code&` + // Use 'code' for the Authorization Code Flow (standard for SPAs)
+                `client_id=${AUTH0_CLIENT_ID}&` +
+                `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+                `scope=openid%20profile%20email&` + // Standard OIDC scopes
+                `audience=${encodeURIComponent(AUTH0_AUDIENCE)}`; // Your API audience
+
+            // Redirect the user's browser to Auth0
+            window.location.assign(authorizeUrl);
+        });
+    </script>
+</body>
+</html>
