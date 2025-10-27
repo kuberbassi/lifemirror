@@ -5,13 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tasks - LifeMirror 3.0</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.auth0.com/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 </head>
 
 <body>
@@ -142,19 +144,17 @@
                 </div>
             </div>
 
-            // LifeMirror/tasks.html (Around line 118)
-
             <div class="card" style="grid-column: span 1; padding: 12px;">
                 <div id="calendar-feature-container">
                     <div id="calendar" style="height: 100%;"></div>
-                    <div id="google-signin-overlay"
+                    <div id="clerk-signin-overlay"
                         style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; border-radius: 12px;">
                         <i data-feather="calendar" style="width: 32px; height: 32px; color: var(--c-accent-blue);"></i>
                         <h3 style="margin: 15px 0 10px 0;">Sync Your Schedule</h3>
                         <p style="text-align: center; color: var(--c-text-muted); max-width: 80%; margin-bottom: 20px;">
-                            Link your schedule by signing in with Clerk.</p>
-                        <button class="add-new-button secondary" id="clerk-signin-button">
-                            <i data-feather="lock"></i> Sign In with Clerk (Mock)
+                            Sign in to link your external calendar and view events.</p>
+                        <button class="add-new-button secondary" id="clerk-open-signin">
+                            <i data-feather="lock"></i> Sign In to Unlock
                         </button>
                     </div>
                 </div>
@@ -164,7 +164,7 @@
 
     <script> feather.replace() </script>
 
-    <script src="script.js"></script>
+    <script src="/js/script.js"></script>
 </body>
 
 </html>

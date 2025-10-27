@@ -1,27 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - LifeMirror 3.0</title>
-    <link rel="stylesheet" href="style.css"> <script src="https://unpkg.com/feather-icons"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.auth0.com/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 </head>
+
 <body>
 
     <div class="modal-overlay" id="delete-data-confirm-modal" style="display: none;">
         <div class="modal-dialog" style="max-width: 400px; text-align: center;">
-            <h3 style="color: var(--c-accent-red); margin-bottom: 8px;"><i data-feather="alert-triangle" style="width: 24px; height: 24px;"></i> Confirm Data Destruction</h3>
-            <p style="margin-bottom: 24px; color: var(--c-text-dark);">This will erase **ALL** your tasks, bills, mood history, and links. This cannot be undone.</p>
+            <h3 style="color: var(--c-accent-red); margin-bottom: 8px;"><i data-feather="alert-triangle"
+                    style="width: 24px; height: 24px;"></i> Confirm Data Destruction</h3>
+            <p style="margin-bottom: 24px; color: var(--c-text-dark);">This will erase **ALL** your tasks, bills, mood
+                history, and links. This cannot be undone.</p>
             <div class="modal-actions" style="justify-content: space-between; margin-top: 0;">
                 <button class="modal-button secondary" id="delete-data-cancel-button">Cancel</button>
                 <button class="modal-button delete" id="delete-data-confirm-button">Erase Data</button>
             </div>
         </div>
     </div>
-    
+
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
         <ul class="sidebar-menu" id="sidebar-menu">
@@ -41,7 +49,10 @@
     <main class="main-content">
         <header class="top-bar">
             <div class="date-time"><span id="current-time">00:50</span><span>Sunday, 26 October 2025</span></div>
-            <div class="global-controls"><div class="control-icon-wrapper"><i data-feather="bell"></i></div><img src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic"></div>
+            <div class="global-controls">
+                <div class="control-icon-wrapper"><i data-feather="bell"></i></div><img
+                    src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic">
+            </div>
         </header>
         <div id="global-notification-panel"></div>
         <section class="hero-header">
@@ -50,15 +61,13 @@
         </section>
 
         <section class="page-grid" style="grid-template-columns: 1fr 1fr; gap: 30px;">
-            
-            // LifeMirror/settings.html (Around line 33)
 
             <div class="card settings-card" style="grid-column: span 1;">
                 <h3>Account & Profile</h3>
                 <p class="setting-description">Manage your personal information and profile settings.</p>
                 <div class="modal-form-group">
                     <label for="profile-name-input">Full Name</label>
-                    <input type="text" id="profile-name-input" value="Kuber Bassi"> 
+                    <input type="text" id="profile-name-input" value="Kuber Bassi">
                 </div>
                 <div class="modal-form-group">
                     <label for="profile-email-input">Email Address</label>
@@ -68,11 +77,12 @@
                     <label for="profile-password-input">Password (Mock Reset)</label>
                     <input type="password" id="profile-password-input" value="********">
                 </div>
-                <button class="add-new-button secondary" style="width: 100%; margin-top: 20px;" id="save-profile-button">
-                     <i data-feather="save"></i> Save Profile Changes
+                <button class="add-new-button secondary" style="width: 100%; margin-top: 20px;"
+                    id="save-profile-button">
+                    <i data-feather="save"></i> Save Profile Changes
                 </button>
             </div>
-            
+
             <div class="card settings-card" style="grid-column: span 1;">
                 <h3>Dashboard & Visuals</h3>
                 <div class="setting-item">
@@ -95,9 +105,9 @@
                     <label for="toggle-mood-summary">Mood & Stress Tile</label>
                     <input type="checkbox" id="toggle-mood-summary" class="toggle-switch" checked>
                 </div>
-                 <div class="setting-item">
+                <div class="setting-item">
                     <label for="toggle-assets-summary">Social Hub Tile</label>
-                    <input type="checkbox" id="toggle-assets-summary" class="toggle-switch"> 
+                    <input type="checkbox" id="toggle-assets-summary" class="toggle-switch">
                 </div>
             </div>
 
@@ -107,61 +117,72 @@
                     <label for="toggle-focus">Enable Focus Mode</label>
                     <input type="checkbox" id="toggle-focus" class="toggle-switch">
                 </div>
-                 <p class="setting-description">Focus Mode temporarily hides non-critical tiles and notifications.</p>
+                <p class="setting-description">Focus Mode temporarily hides non-critical tiles and notifications.</p>
 
-                <hr class="setting-divider"> <h4>Smart Notifications</h4>
-                 <p class="setting-description">Receive alerts only for critical tasks, bills, or high stress levels.</p>
-                 <div class="setting-item">
+                <hr class="setting-divider">
+                <h4>Smart Notifications</h4>
+                <p class="setting-description">Receive alerts only for critical tasks, bills, or high stress levels.</p>
+                <div class="setting-item">
                     <label for="toggle-smart-notify">Enable Smart Notifications</label>
                     <input type="checkbox" id="toggle-smart-notify" class="toggle-switch" checked>
                 </div>
-                 <div class="setting-item">
+                <div class="setting-item">
                     <label for="toggle-sleep-reminder">Daily Sleep Reminder (6-10 AM)</label>
                     <input type="checkbox" id="toggle-sleep-reminder" class="toggle-switch" checked>
                 </div>
             </div>
-            
+
             <div class="card settings-card" style="grid-column: span 1;">
-                 <h3>AI Integrations (Demo)</h3>
-                 <p class="setting-description">Simulate the advanced conversational AI that processes your daily chat input for automation.</p>
-                 <div class="placeholder-text" id="ai-processor-container">Integration management options would go here.</div>
+                <h3>AI Integrations (Demo)</h3>
+                <p class="setting-description">Simulate the advanced conversational AI that processes your daily chat
+                    input for automation.</p>
+                <div class="setting-item">
+                    <label>Database Connection</label>
+                    <p style="color: var(--c-accent-red); font-weight: 600;">MongoDB: DISCONNECTED (API Required)</p>
+                </div>
+                <hr class="setting-divider">
+                <div class="placeholder-text" id="ai-processor-container">Integration management options would go here.
+                </div>
             </div>
-            
+
             <div class="card settings-card" style="grid-column: span 2;">
                 <h3>Data Management & Control</h3>
-                <p class="setting-description">Exercise full control over your private data stored in LifeMirror. Data is stored locally for this prototype.</p>
-                
+                <p class="setting-description">Exercise full control over your private data stored in LifeMirror. Data
+                    is stored locally for this prototype.</p>
+
                 <div class="setting-item">
                     <label>Import Data (JSON)</label>
                     <div class="import-control">
                         <input type="file" id="import-file-input" accept=".json" style="display: none;">
                         <button class="modal-button secondary" id="import-data-button">
-                             <i data-feather="upload"></i> Select File
+                            <i data-feather="upload"></i> Select File
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="setting-item">
                     <label for="export-data-button">Export All Data (.json)</label>
                     <button class="modal-button secondary" id="export-data-button">
                         <i data-feather="download"></i> Export Data
                     </button>
                 </div>
-                
+
                 <div class="setting-item danger-item">
-                    <label for="delete-data-button" style="color: var(--c-accent-red); font-weight: 600;">Permanently Delete All Data</label>
+                    <label for="delete-data-button" style="color: var(--c-accent-red); font-weight: 600;">Permanently
+                        Delete All Data</label>
                     <button class="modal-button delete" id="delete-data-button">
                         <i data-feather="trash-2"></i> Delete All
                     </button>
                 </div>
             </div>
 
-        </section> 
-        
-    </main> 
+        </section>
+
+    </main>
     <script>
-      feather.replace()
+        feather.replace()
     </script>
-    <script src="script.js"></script>
+    <script src="/js/script.js"></script>
 </body>
+
 </html>

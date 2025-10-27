@@ -19,20 +19,11 @@ const TODAY_DATE = getTodayDateString(); // Dynamic date for today
 
 
 // --- TASKS STATE (Global for all Task/Dashboard pages) ---
-let taskState = [
-    { id: 'task1', text: 'Finalize project report', priority: 'high', date: TODAY_DATE, completed: false, type: 'task' },
-    { id: 'task2', text: 'Call with team', priority: 'medium', date: TODAY_DATE, completed: false, type: 'task' },
-    { id: 'task3', text: 'Pay electricity bill', priority: 'high', date: '2025-10-28', completed: false, type: 'task' },
-    { id: 'task4', text: 'Submit CSE Assignment', priority: 'medium', date: '2025-10-27', completed: false, type: 'task' },
-    { id: 'task5', text: 'Practice guitar', priority: 'low', date: TODAY_DATE, completed: false, type: 'task' },
-    { id: 'task6', text: 'Buy groceries', priority: 'low', date: '2025-10-30', completed: false, type: 'task' },
-    // Mock Calendar Events
-    { id: 'event1', text: 'Project Sync Meeting', priority: 'medium', date: '2025-10-27', completed: false, type: 'meeting' },
-    { id: 'event2', text: 'Deep Work Slot', priority: 'high', date: '2025-10-29', completed: false, type: 'meeting' },
-    { id: 'holiday1', text: 'Diwali (Holiday)', priority: 'low', date: '2025-10-24', completed: false, type: 'holiday' },
-];
+// CRITICAL FIX: Initialize as an empty array to be populated from MongoDB API
+let taskState = [];
 
 // --- FITNESS STATE (Global for all Fitness/Dashboard pages) ---
+// Note: This block remains as mock data as per instruction to minimize changes
 let fitnessHistory = [
     { id: 1, date: '2025-10-25', time: '23:00', type: 'sleep', value: 5.5, unit: 'hours' }, // LOW SLEEP for critical alert
     { id: 2, date: TODAY_DATE, time: '10:00', type: 'steps', value: 3500, unit: 'steps' },
@@ -43,6 +34,7 @@ let fitnessHistory = [
 let completedSuggestions = [];
 
 // --- MOOD STATE (Global for all Mood/Dashboard pages) ---
+// Note: This block remains as mock data as per instruction to minimize changes
 let moodHistory = [
     { date: '2025-10-23', mood: 3, note: 'Had a productive morning.', stress: 30, isFinal: true },
     { date: '2025-10-24', mood: 2, note: 'Normal work day.', stress: 45, isFinal: true },
@@ -58,6 +50,7 @@ const moodMap = {
 };
 
 // --- FINANCE STATE (Global for all Finance/Dashboard pages) ---
+// Note: This block remains as mock data as per instruction to minimize changes
 let billState = [
     { id: 'bill1', name: 'Netflix Subscription', category: 'Streaming Service', amount: 500, dueDate: '2025-12-27', frequency: 'monthly', icon: 'tv', paid: false, overdue: false, paymentLink: 'https://netflix.com' },
     { id: 'bill2', name: 'Electricity Bill', category: 'Utilities', amount: 2000, dueDate: '2025-10-23', frequency: 'monthly', icon: 'home', paid: false, overdue: true, paymentLink: 'https://paytm.com/electricity' }, // OVERDUE for critical alert
@@ -74,23 +67,130 @@ const MOCK_CLERK_USER = {
     profilePicUrl: "https://i.pravatar.cc/40?u=kuber"
 };
 
+// ===============================================
+// NEW: MONGODB/API SERVICE LAYER
+// ===============================================
+
+/**
+ * Handles all secure asynchronous API interactions for Tasks.
+ * This abstracts local array modifications behind API calls.
+ */
+const taskApiService = {
+    // NOTE: For a real app, you would need to retrieve the Auth0 token (JWT) 
+    // from the Auth0 SPA SDK and include it in the Authorization header for every request. 
+    // We assume the fetch calls inherently handle this for the prototype context.
+    
+    async fetchTasks() {
+        try {
+            const response = await fetch('/api/tasks');
+            if (!response.ok) {
+                // Handle 401 Unauthorized or other server errors
+                throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API Error (fetchTasks):', error);
+            // Display an error only if we are on the Tasks page, otherwise fail silently
+            if (window.location.pathname.includes('tasks.html')) {
+                showFlashMessage('Error loading tasks. Please check your API connection.', 'alert-triangle');
+            }
+            return [];
+        }
+    },
+
+    async createTask(taskData) {
+        const payload = {
+            ...taskData,
+            priority: taskData.priority || 'medium',
+            type: taskData.type || 'task'
+        };
+
+        const response = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to create task: ${error.message}`);
+        }
+        return await response.json();
+    },
+
+    async updateTask(taskId, updateData) {
+        const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to update task: ${error.message}`);
+        }
+        return await response.json();
+    },
+
+    async deleteTask(taskId) {
+        const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to delete task: ${error.message}`);
+        }
+        return response.status === 200;
+    }
+};
+
+/**
+ * Core function to sync local taskState with the MongoDB backend and re-render affected UI components.
+ * This is the 'jugaad' solution to prevent refactoring all render functions.
+ * @param {boolean} forceRenderDashboard - Force re-render of the dashboard if needed.
+ */
+async function syncTaskState(forceRenderDashboard = false) {
+    try {
+        const fetchedTasks = await taskApiService.fetchTasks();
+        // Replace local mock state with fresh data from MongoDB
+        taskState = fetchedTasks.map(task => ({
+            // CRITICAL: Map MongoDB's _id to the expected 'id' property in local mock structure
+            // for compatibility with old render logic, while keeping _id for API calls.
+            ...task,
+            id: task._id 
+        }));
+    } catch (e) {
+        console.error('Failed to sync task state:', e);
+        // Keep taskState as is on failure
+        return;
+    }
+    
+    // Re-render affected components based on current page
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    
+    // Note: Since renderTaskList is only defined inside initializeTasksPageLogic, 
+    // we use a flag or re-call the initialization, or we check for its existence.
+    // For this prototype, we rely on the caller to handle the local render update after sync.
+    
+    if (document.getElementById('dashboard-grid') || forceRenderDashboard) {
+        // This relies on renderDashboardMetrics being in scope, which it is globally.
+        if (typeof renderDashboardMetrics === 'function') {
+             renderDashboardMetrics();
+        }
+    }
+}
+
 // --- GENERAL HELPER FUNCTIONS ---
 function updateUserProfileUI() {
     const profilePic = document.querySelector('.profile-pic');
-    const profileNameInput = document.getElementById('profile-name-input');
-    const profileEmailInput = document.getElementById('profile-email-input');
-
-    if (profilePic) {
-        profilePic.src = MOCK_CLERK_USER.profilePicUrl;
-        profilePic.alt = `Profile: ${MOCK_CLERK_USER.firstName}`;
-    }
-
-    // Only update settings page if elements exist
-    if (profileNameInput) {
-        profileNameInput.value = `${MOCK_CLERK_USER.firstName} ${MOCK_CLERK_USER.lastName}`;
-    }
-    if (profileEmailInput) {
-        profileEmailInput.value = MOCK_CLERK_USER.email;
+    
+    // Check if Clerk and user object are available
+    const user = window.Clerk ? window.Clerk.user : null;
+    
+    if (profilePic && user) {
+        profilePic.src = user.imageUrl || "https://i.pravatar.cc/40?u=kuber"; // Use Clerk image
+        profilePic.alt = `Profile: ${user.firstName || 'User'}`;
+    } else if (profilePic) {
+        // Fallback for non-Clerk pages or while loading
+        profilePic.src = "https://i.pravatar.cc/40?u=kuber"; // Default Kuber picture
     }
 }
 
@@ -184,10 +284,14 @@ function renderNotificationPanel(panel) {
     const highStress = moodHistory.length > 0 && moodHistory[moodHistory.length - 1].stress >= 70;
     const lowSleep = fitnessHistory.find(log => log.type === 'sleep' && log.value < 6);
 
+    // CRITICAL: This now uses the globally synced taskState
+    const projectReportTask = taskState.find(t => t.text.includes('Project Report') && !t.completed);
+    const projectReportDueTomorrow = projectReportTask ? (calculateDueDays(projectReportTask.date) === 1) : false;
+
     const activeNotifications = [
         { id: 1, type: 'critical', message: `Overdue: ${overdueBill}. Pay Now!`, link: 'finance.html', icon: 'alert-triangle', active: !!billState.find(b => b.overdue && !b.paid) },
         { id: 2, type: 'critical', message: `High Stress Index (${moodHistory[moodHistory.length - 1].stress}%). Log a break.`, link: 'mood.html', icon: 'zap', active: highStress },
-        { id: 3, type: 'low', message: 'Project Report due tomorrow.', link: 'tasks.html', icon: 'check-square', active: true },
+        { id: 3, type: 'low', message: 'Project Report due tomorrow.', link: 'tasks.html', icon: 'check-square', active: projectReportDueTomorrow },
         { id: 4, type: 'low', message: `Low Sleep detected (${lowSleep?.value || 5.5}h).`, link: 'fitness.html', icon: 'moon', active: !!lowSleep },
     ].filter(n => n.active);
 
@@ -226,22 +330,27 @@ function renderNotificationPanel(panel) {
 
 /**
  * Mocks the addition of a task to the global state (used by Vault page)
+ * This must now call the API to ensure the task is persisted.
  */
-function addNewTaskFromVault(text, duration) {
+async function addNewTaskFromVault(text, duration) {
     if (typeof showFlashMessage === 'function') {
         showFlashMessage(`Task: "${text}" added to your schedule for ${duration} min!`, 'check-square');
     }
-    const newTask = {
-        id: 'task' + (taskState.length + 1 + Math.random()),
+    
+    const newTaskData = {
         text: text.trim(),
         priority: 'medium', // Default priority from Vault
         date: getTodayDateString(),
         completed: false,
         type: 'task'
     };
-    taskState.push(newTask);
-    if (document.getElementById('dashboard-grid')) {
-        renderDashboardMetrics();
+
+    try {
+        await taskApiService.createTask(newTaskData);
+        await syncTaskState(true); // Sync state and force dashboard re-render
+    } catch (error) {
+        console.error('Error adding task from Vault:', error);
+        showFlashMessage('Error saving task to database.', 'alert-triangle');
     }
 }
 
@@ -295,6 +404,7 @@ function renderDashboardMetrics() {
     const TODAY_DATE = getTodayDateString();
 
     // A. Tasks/Schedule Metrics
+    // CRITICAL: Now uses the global taskState synced from MongoDB
     let totalPendingTasks = taskState.filter(t => t.type === 'task' && !t.completed).length;
     let totalCompletedTasks = taskState.filter(t => t.type === 'task' && t.completed).length;
     const totalTasks = totalPendingTasks + totalCompletedTasks;
@@ -493,7 +603,6 @@ function renderDashboardMetrics() {
 
 
     // --- 3. UPDATE SCHEDULE LIST (Today's Schedule Card) ---
-    // ... (This section remains unchanged from previous steps) ...
     const scheduleList = document.getElementById('task-list-container');
     if (scheduleList) {
         scheduleItemsToday.sort((a, b) => {
@@ -517,16 +626,17 @@ function renderDashboardMetrics() {
             const isTask = item.type === 'task' || item.type === undefined;
             const li = document.createElement('li');
             li.className = `task-item ${item.completed ? 'completed' : ''}`;
+            const taskId = item._id || item.id; // Use MongoDB _id or mock id
 
             const inputOrIcon = isTask
-                ? `<input type="checkbox" id="dash-${item.id}" ${item.completed ? 'checked' : ''}>`
+                ? `<input type="checkbox" id="dash-${taskId}" ${item.completed ? 'checked' : ''}>`
                 : `<i data-feather="${item.type === 'meeting' ? 'users' : 'gift'}" style="width: 20px; height: 20px; color: var(--c-text-muted);"></i>`;
 
             const labelText = isTask ? item.text : `${item.text} (${item.type})`;
 
             li.innerHTML = `
                 ${inputOrIcon}
-                <label for="dash-${item.id}" style="margin-left: ${isTask ? '12px' : '10px'};">${labelText}</label>
+                <label for="dash-${taskId}" style="margin-left: ${isTask ? '12px' : '10px'};">${labelText}</label>
              `;
             scheduleList.appendChild(li);
         });
@@ -535,18 +645,30 @@ function renderDashboardMetrics() {
         // so this listener setup usually requires the logic to be moved or simplified.
         // For now, the implementation relies on the function being defined/passed in initialization.
         scheduleList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
+            checkbox.addEventListener('change', async (e) => { // Made async
                 const isChecked = e.target.checked;
                 const taskId = e.target.id.replace('dash-', '');
-                const task = taskState.find(t => t.id === taskId);
+                const task = taskState.find(t => (t._id || t.id) === taskId);
 
                 if (task) {
-                    task.completed = isChecked;
-                    const scoreChange = isChecked ? 3 : -3;
-                    // The function call below relies on the outer scope of initializeDashboardPage
-                    // updateLifeScore(scoreChange); 
+                    try {
+                        // CRITICAL FIX: Update via API and sync state
+                        await taskApiService.updateTask(taskId, { completed: isChecked });
+                        const scoreChange = isChecked ? 3 : -3;
+                        // The function call below relies on the outer scope of initializeDashboardPage
+                        // updateLifeScore(scoreChange); 
 
-                    renderDashboardMetrics();
+                        await syncTaskState();
+                        if (typeof updateLifeScore === 'function') {
+                             updateLifeScore(scoreChange);
+                        }
+                    } catch (error) {
+                        console.error('Error updating task from Dashboard:', error);
+                        showFlashMessage('Error updating task. API call failed.', 'alert-triangle');
+                        // Revert checkbox state if API fails
+                        e.target.checked = !isChecked; 
+                        renderDashboardMetrics();
+                    }
                 }
             });
         });
@@ -602,13 +724,13 @@ function renderDashboardMetrics() {
 
         pendingTasksToday.forEach(task => {
             actionItems.push({
-                id: `task-action-${task.id}`,
+                id: `task-action-${task._id || task.id}`,
                 status: 'task',
                 icon: 'check-square',
                 text: `Task: ${task.text} (${task.priority}).`,
                 buttonText: 'Complete',
                 action: 'complete-task',
-                dataId: task.id,
+                dataId: task._id || task.id,
                 priorityScore: task.priority === 'high' ? 7 : (task.priority === 'medium' ? 6 : 5)
             });
         });
@@ -621,7 +743,14 @@ function renderDashboardMetrics() {
             finalHTML = `<li class="remedy-item" data-status="info"><i data-feather="thumbs-up"></i><p>You're all set! No critical actions or tasks due today.</p></li>`;
         } else {
             actionItems.forEach(item => {
-                const isCompleted = item.action === 'pay' && billState.find(b => b.id === item.dataId && b.paid);
+                // Check current task status from global state for Dashboard items
+                let isCompleted = false;
+                if (item.action === 'pay') {
+                    isCompleted = billState.find(b => b.id === item.dataId)?.paid;
+                } else if (item.action === 'complete-task') {
+                    isCompleted = taskState.find(t => (t._id || t.id) === item.dataId)?.completed;
+                }
+
 
                 finalHTML += `
                     <li class="remedy-item ${isCompleted ? 'completed' : ''}" 
@@ -630,7 +759,7 @@ function renderDashboardMetrics() {
                         <p>${item.text}</p>
                         <button class="remedy-button" data-action="${item.action}" data-id="${item.dataId}" 
                             ${isCompleted ? 'disabled' : ''}>
-                            ${isCompleted ? 'Paid' : item.buttonText}
+                            ${isCompleted ? (item.action === 'pay' ? 'Paid' : 'Done') : item.buttonText}
                         </button>
                     </li>
                 `;
@@ -661,6 +790,9 @@ function initializeDashboardPage() {
         lifeScoreElement.classList.add('pop');
         setTimeout(() => lifeScoreElement.classList.remove('pop'), 300);
     }
+
+    // Expose updateLifeScore globally (as a 'jugaad' to call from task listener in renderDashboardMetrics)
+    window.updateLifeScore = updateLifeScore;
 
     // Check global state for notifications banner (Dashboard only)
     if (notificationPanel) {
@@ -695,7 +827,7 @@ function initializeDashboardPage() {
         const liveRemedyButtons = remedyList.querySelectorAll('.remedy-button');
 
         liveRemedyButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
+            button.addEventListener('click', async (e) => { // Made async
                 const action = e.currentTarget.dataset.action;
                 const itemId = e.currentTarget.dataset.id;
                 const remedyItem = e.currentTarget.closest('.remedy-item');
@@ -704,9 +836,9 @@ function initializeDashboardPage() {
                 if (e.currentTarget.disabled) return;
 
                 if (action === 'pay') {
+                    // This remains local mock for finance state
                     const overdueBill = billState.find(b => b.id === itemId);
                     if (overdueBill) {
-                        // ... (unchanged logic for updating billState and adding next bill) ...
                         overdueBill.paid = true;
                         overdueBill.overdue = false;
 
@@ -725,21 +857,28 @@ function initializeDashboardPage() {
                     }
                     e.currentTarget.textContent = 'Paid'; // Set button text immediately
                 } else if (action === 'schedule') {
-                    // ... (unchanged health logic) ...
+                    // This remains local mock for health state
                     showFlashMessage(`30-min break scheduled. Stress Index reduced.`, 'coffee');
                     updateLifeScore(2);
                     e.currentTarget.textContent = 'Scheduled';
                 } else if (action === 'meditate') {
-                    // ... (unchanged health logic) ...
+                    // This remains local mock for health state
                     showFlashMessage(`5-min meditation started (Mock). Stress reduced.`, 'zap');
                     updateLifeScore(2);
                     e.currentTarget.textContent = 'Done'; // "Done" is fine for single-use remedy
                 } else if (action === 'complete-task') {
-                    const task = taskState.find(t => t.id === itemId);
+                    // CRITICAL FIX: Update via API for task completion
+                    const task = taskState.find(t => (t._id || t.id) === itemId);
                     if (task) {
-                        task.completed = true;
-                        showFlashMessage(`Task completed: ${task.text}!`, 'check-circle');
-                        updateLifeScore(3);
+                        try {
+                            await taskApiService.updateTask(itemId, { completed: true });
+                            showFlashMessage(`Task completed: ${task.text}!`, 'check-circle');
+                            updateLifeScore(3);
+                        } catch (error) {
+                            console.error('Dashboard task completion error:', error);
+                            showFlashMessage('Error completing task. API call failed.', 'alert-triangle');
+                            return; // Stop here if API fails
+                        }
                     }
                     e.currentTarget.textContent = 'Done'; // Set button text immediately
                 }
@@ -748,7 +887,8 @@ function initializeDashboardPage() {
                 e.currentTarget.disabled = true;
                 if (remedyItem) remedyItem.classList.add('completed');
 
-                // Re-render the whole dashboard to reflect changes
+                // Re-render the whole dashboard to reflect changes (including the sync for tasks)
+                await syncTaskState(); 
                 renderDashboardMetrics();
                 attachRemedyListeners();
             });
@@ -756,9 +896,14 @@ function initializeDashboardPage() {
     }
 
     // Initial render and setup
-    renderDashboardMetrics();
-    attachRemedyListeners();
-    feather.replace();
+    async function initialDashboardRender() {
+        await syncTaskState(); // Ensure tasks are loaded before metrics run
+        renderDashboardMetrics();
+        attachRemedyListeners();
+        feather.replace();
+    }
+    
+    initialDashboardRender();
 }
 
 
@@ -774,13 +919,14 @@ function initializeTasksPageLogic() {
     // --- 1. STATE MANAGEMENT (Uses Global taskState) ---
     let activeTaskFilter = 'date';
     const mainTaskList = document.getElementById('main-task-list');
+    let taskToDeleteId = null; // Used by delete confirm modal
 
     // --- 2. CORE RENDER FUNCTION ---
     function renderTaskList() {
         if (!mainTaskList) return;
 
         // 1. FILTERING STEP
-        let displayTasks = taskState.filter(task => {
+        let displayTasks = taskState.filter(task => { 
             if (task.type !== 'task' && task.type !== undefined) return false;
 
             if (activeTaskFilter === 'completed') {
@@ -790,7 +936,7 @@ function initializeTasksPageLogic() {
         });
 
         // 2. SORTING LOGIC (Date -> Priority)
-        displayTasks.sort((a, b) => {
+         displayTasks.sort((a, b) => {
             const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
             const priorityA = priorityOrder[a.priority] || 0;
             const priorityB = priorityOrder[b.priority] || 0;
@@ -812,7 +958,6 @@ function initializeTasksPageLogic() {
 
             return priorityB - priorityA;
         });
-        // -------------------------------------------------------
 
         mainTaskList.innerHTML = '';
         if (displayTasks.length === 0) {
@@ -823,9 +968,10 @@ function initializeTasksPageLogic() {
         }
 
         displayTasks.forEach(task => {
+            const taskId = task._id || task.id; // CRITICAL: Use MongoDB _id or mock id
             const li = document.createElement('li');
             li.className = `task-item ${task.completed ? 'completed' : ''}`;
-            li.dataset.id = task.id;
+            li.dataset.id = taskId;
 
             let formattedDate = '';
             if (task.date) {
@@ -836,16 +982,16 @@ function initializeTasksPageLogic() {
             }
 
             li.innerHTML = `
-                <input type="checkbox" id="${task.id}" ${task.completed ? 'checked' : ''}>
-                <label for="${task.id}">${task.text}</label>
+                <input type="checkbox" id="${taskId}" ${task.completed ? 'checked' : ''}>
+                <label for="${taskId}">${task.text}</label>
                 <span class="task-date">${formattedDate}</span>
                 <span class="task-tag ${task.priority}">${task.priority}</span>
                 
                 <div class="task-actions">
-                    <button class="edit-task-button" data-id="${task.id}" title="Edit Task">
+                    <button class="edit-task-button" data-id="${taskId}" title="Edit Task">
                         <i data-feather="edit-2" style="width: 14px;"></i>
                     </button>
-                    <button class="delete-task-button" data-id="${task.id}" title="Delete Task">
+                    <button class="delete-task-button" data-id="${taskId}" title="Delete Task">
                         <i data-feather="trash-2" style="width: 14px;"></i>
                     </button>
                 </div>
@@ -856,7 +1002,7 @@ function initializeTasksPageLogic() {
         mainTaskList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
                 const taskId = e.target.closest('.task-item').dataset.id;
-                toggleTaskCompleted(taskId);
+                toggleTaskCompleted(taskId); // Calls the updated async function
             });
         });
 
@@ -867,9 +1013,9 @@ function initializeTasksPageLogic() {
         });
         mainTaskList.querySelectorAll('.delete-task-button').forEach(button => {
             button.addEventListener('click', (e) => {
-                const task = taskState.find(t => t.id === e.currentTarget.dataset.id);
+                const task = taskState.find(t => (t._id || t.id) === e.currentTarget.dataset.id);
                 if (task) {
-                    showDeleteConfirmModal(task.id, task.text);
+                    showDeleteConfirmModal(task._id || task.id, task.text);
                 }
             });
         });
@@ -880,34 +1026,53 @@ function initializeTasksPageLogic() {
 
         feather.replace();
     }
+    
+    // --- 3. UPDATED CRUD LOGIC (Uses API Service) ---
 
-    function toggleTaskCompleted(taskId) {
-        const task = taskState.find(t => t.id === taskId);
+    async function toggleTaskCompleted(taskId) {
+        const task = taskState.find(t => (t._id || t.id) === taskId);
         if (task) {
-            task.completed = !task.completed;
+            try {
+                const isCompleted = !task.completed;
+                await taskApiService.updateTask(taskId, { completed: isCompleted });
+                
+                if (isCompleted && typeof showFlashMessage === 'function') {
+                    showFlashMessage(`Task completed: ${task.text}! Well done.`, 'check-circle');
+                } else if (!isCompleted) {
+                    showFlashMessage(`Task marked incomplete: ${task.text}.`, 'alert-triangle');
+                }
 
-            if (task.completed && typeof showFlashMessage === 'function') {
-                showFlashMessage(`Task completed: ${task.text}! Well done.`, 'check-circle');
+                // Sync local state and re-render
+                await syncTaskState(true); // Force dashboard re-render
+                renderTaskList();
+            } catch (error) {
+                console.error('Error toggling task completion:', error);
+                showFlashMessage('Error updating task. API call failed.', 'alert-triangle');
             }
         }
-        renderTaskList();
-        if (document.getElementById('dashboard-grid')) {
-            renderDashboardMetrics();
+    }
+
+    async function deleteTask(taskId) {
+        try {
+            const success = await taskApiService.deleteTask(taskId);
+            if (success) {
+                if (typeof showFlashMessage === 'function') {
+                    showFlashMessage(`Task deleted successfully.`, 'trash-2');
+                }
+                // Sync local state and re-render
+                await syncTaskState(true); // Force dashboard re-render
+                renderTaskList();
+            } else {
+                 showFlashMessage('Error deleting task: Not found or unauthorized.', 'alert-triangle');
+            }
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            showFlashMessage('Error deleting task. API call failed.', 'alert-triangle');
         }
     }
 
-    function deleteTask(taskId) {
-        taskState = taskState.filter(t => t.id !== taskId);
-        renderTaskList();
-        if (typeof showFlashMessage === 'function') {
-            showFlashMessage(`Task deleted successfully.`, 'trash-2');
-        }
-        if (document.getElementById('dashboard-grid')) {
-            renderDashboardMetrics();
-        }
-    }
 
-    // --- 3. "ADD TASK" MODAL LOGIC ---
+    // --- 4. "ADD TASK" MODAL LOGIC (Updated to use API) ---
     const addModal = document.getElementById('add-task-modal');
     const modalCancelButton = document.getElementById('modal-cancel-button');
     const modalAddButton = document.getElementById('modal-add-button');
@@ -940,15 +1105,14 @@ function initializeTasksPageLogic() {
     });
 
     if (modalAddButton) {
-        modalAddButton.addEventListener('click', () => {
+        modalAddButton.addEventListener('click', async () => { // Made async
             const taskText = taskTextInput.value;
             if (!taskText || taskText.trim() === "") {
                 alert('Please enter a task description.');
                 return;
             }
 
-            const newTask = {
-                id: 'task' + (taskState.length + 1 + Math.random()),
+            const newTaskData = {
                 text: taskText.trim(),
                 priority: taskPrioritySelect.value,
                 date: taskDateInput.value || getTodayDateString(),
@@ -956,14 +1120,16 @@ function initializeTasksPageLogic() {
                 type: 'task'
             };
 
-            taskState.push(newTask);
-            renderTaskList();
-            hideAddModal();
-            if (typeof showFlashMessage === 'function') {
-                showFlashMessage(`Task added: ${newTask.text}`, 'plus-circle');
-            }
-            if (document.getElementById('dashboard-grid')) {
-                renderDashboardMetrics();
+            try {
+                const response = await taskApiService.createTask(newTaskData);
+                await syncTaskState(true); // Sync state and force dashboard re-render
+                hideAddModal();
+                if (typeof showFlashMessage === 'function') {
+                    showFlashMessage(`Task added: ${response.task.text}`, 'plus-circle');
+                }
+            } catch (error) {
+                console.error('Error adding task:', error);
+                showFlashMessage('Error creating task. API call failed.', 'alert-triangle');
             }
         });
     }
@@ -981,7 +1147,7 @@ function initializeTasksPageLogic() {
         });
     }
 
-    // --- Y. EDIT TASK MODAL LOGIC ---
+    // --- Y. EDIT TASK MODAL LOGIC (Updated to use API) ---
     const editModal = document.getElementById('edit-task-modal');
     const editModalCancelButton = document.getElementById('edit-modal-cancel-button');
     const editModalSaveButton = document.getElementById('edit-modal-save-button');
@@ -993,10 +1159,10 @@ function initializeTasksPageLogic() {
     const editTaskDateInput = document.getElementById('edit-task-date-input');
 
     function openEditModal(taskId) {
-        const task = taskState.find(t => t.id === taskId);
+        const task = taskState.find(t => (t._id || t.id) === taskId);
         if (!task || editModal.style.display === 'flex') return;
 
-        editTaskIdInput.value = task.id;
+        editTaskIdInput.value = task._id || task.id;
         editTaskTextInput.value = task.text;
         editTaskPrioritySelect.value = task.priority;
         editTaskDateInput.value = task.date;
@@ -1016,22 +1182,27 @@ function initializeTasksPageLogic() {
     });
 
     if (editModalSaveButton) {
-        editModalSaveButton.addEventListener('click', () => {
+        editModalSaveButton.addEventListener('click', async () => { // Made async
             const taskId = editTaskIdInput.value;
-            const task = taskState.find(t => t.id === taskId);
+            const task = taskState.find(t => (t._id || t.id) === taskId);
 
             if (task) {
-                task.text = editTaskTextInput.value;
-                task.priority = editTaskPrioritySelect.value;
-                task.date = editTaskDateInput.value;
+                const updateData = {
+                    text: editTaskTextInput.value,
+                    priority: editTaskPrioritySelect.value,
+                    date: editTaskDateInput.value
+                };
 
-                renderTaskList();
-                hideEditModal();
-                if (typeof showFlashMessage === 'function') {
-                    showFlashMessage(`Task updated: ${task.text}`, 'save');
-                }
-                if (document.getElementById('dashboard-grid')) {
-                    renderDashboardMetrics();
+                try {
+                    await taskApiService.updateTask(taskId, updateData);
+                    await syncTaskState(true); // Sync state and force dashboard re-render
+                    hideEditModal();
+                    if (typeof showFlashMessage === 'function') {
+                        showFlashMessage(`Task updated: ${updateData.text}`, 'save');
+                    }
+                } catch (error) {
+                    console.error('Error saving task edits:', error);
+                    showFlashMessage('Error updating task. API call failed.', 'alert-triangle');
                 }
             }
         });
@@ -1065,7 +1236,7 @@ function initializeTasksPageLogic() {
     if (deleteTaskConfirmButton) {
         deleteTaskConfirmButton.addEventListener('click', () => {
             if (taskToDeleteId) {
-                deleteTask(taskToDeleteId);
+                deleteTask(taskToDeleteId); // This calls the API-integrated deleteTask
                 hideDeleteConfirmModal();
             }
         });
@@ -1146,14 +1317,65 @@ function initializeTasksPageLogic() {
     });
 
 
-    // --- 5. INITIAL RENDER ---
-    renderTaskList();
+    // --- 5. INITIAL RENDER (CRITICAL FIX: Initial API call) ---
+    async function initialLoad() {
+        showFlashMessage('Loading tasks from MongoDB...', 'rotate-cw');
+        await syncTaskState(); 
+        renderTaskList(); // Rerender after initial sync
+    }
+
+    initialLoad();
 
     // --- 6. CLERK/CALENDAR INITIALIZATION ---
     const signInButton = document.getElementById('clerk-signin-button'); // RENAMED ID
-    const overlay = document.getElementById('google-signin-overlay');
+    const overlay = document.getElementById('clerk-signin-overlay');
 
-    if (signInButton) {
+    // MOCK function to initialize calendar (relies on FullCalendar being loaded)
+    function tryInitializeCalendar() {
+         const calendarEl = document.getElementById('calendar');
+         if (calendarEl && FullCalendar && !window.calendar) {
+            window.calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                editable: true,
+                droppable: true,
+                events: function(fetchInfo, successCallback, failureCallback) {
+                    // Filter global taskState to include only scheduled events (meetings/holidays) and non-completed tasks
+                    const events = taskState.filter(t => t.type !== 'task' || !t.completed)
+                        .map(task => ({
+                            id: task._id || task.id,
+                            title: task.text,
+                            start: task.date,
+                            classNames: [task.type || 'task', task.priority]
+                        }));
+                    successCallback(events);
+                },
+                dateClick: function(info) {
+                    showDayTasks(info.dateStr);
+                }
+            });
+            window.calendar.render();
+         }
+         if(overlay) overlay.style.display = 'none';
+    }
+    
+    // MOCK function to check access when auth state changes
+    function checkCalendarAccess() {
+        if (IS_CLERK_SIGNED_IN) {
+            tryInitializeCalendar();
+        } else {
+            const calendarEl = document.getElementById('calendar');
+            if (calendarEl) calendarEl.innerHTML = ''; // Clear calendar
+            if(overlay) overlay.style.display = 'flex';
+        }
+    }
+
+
+    if (signInButton) { // Ensure correct ID check
         signInButton.addEventListener('click', () => {
             IS_CLERK_SIGNED_IN = true; // CHANGED STATE
             if (overlay) overlay.style.display = 'none';
@@ -1167,15 +1389,9 @@ function initializeTasksPageLogic() {
             }, 500);
         });
     }
-
-    // CHECKING NEW STATE
-    if (IS_CLERK_SIGNED_IN) {
-        if (overlay) overlay.style.display = 'none';
-        tryInitializeCalendar();
-    } else {
-        const calendarEl = document.getElementById('calendar');
-        if (calendarEl) calendarEl.innerHTML = '';
-    }
+    
+    // Fallback for direct page load if already signed in (MOCK)
+    checkCalendarAccess();
 }
 
 /**
@@ -1594,7 +1810,7 @@ function initializeMoodPage() {
         let timerInterval;
 
         button.disabled = true;
-        button.textContent = '05:00';
+        button.textContent = durationMinutes < 10 ? `0${durationMinutes}:00` : `${durationMinutes}:00`;
         button.style.backgroundColor = '#ccc'; // Grey out
 
         const updateTimer = () => {
@@ -2191,6 +2407,9 @@ function initializeVaultPage() {
             if (typeof showFlashMessage === 'function') {
                 showFlashMessage(`Link saved: ${name}`, 'link');
             }
+            if (document.getElementById('dashboard-grid')) {
+                renderDashboardMetrics();
+            }
         });
     }
 
@@ -2201,6 +2420,9 @@ function initializeVaultPage() {
         deleteConfirmModal.style.display = 'none';
         if (typeof showFlashMessage === 'function') {
             showFlashMessage('Link deleted.', 'trash-2');
+        }
+        if (document.getElementById('dashboard-grid')) {
+            renderDashboardMetrics();
         }
     }
 
@@ -2215,7 +2437,7 @@ function initializeVaultPage() {
                 return;
             }
 
-            // 1. Log the task to the Tasks page (Simulated integration)
+            // 1. Log the task to the Tasks page (Simulated integration - now calls async API)
             addNewTaskFromVault(taskText, duration);
 
             // 2. Open the URL now that the task is logged
@@ -2920,6 +3142,19 @@ function initializeSettingsPage() {
         feather.replace();
     }
 
+    // E. PROFILE POPULATION (NEW)
+    const profileNameInput = document.getElementById('profile-name-input');
+    const profileEmailInput = document.getElementById('profile-email-input');
+
+    if (window.Clerk && window.Clerk.user) {
+        const user = window.Clerk.user;
+        if (profileNameInput) profileNameInput.value = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`;
+        
+        // Find the primary email address from the Clerk user object
+        const primaryEmail = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : 'Not signed in';
+        if (profileEmailInput) profileEmailInput.value = primaryEmail;
+    }
+
     // --- 3. EVENT LISTENERS ---
 
     // A. GENERAL TOGGLES - Made Functional
@@ -3109,30 +3344,68 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateClock, 10000);
 
 
-    // --- 3. Global Feather Icons ---
+    // --- 4. Global Feather Icons ---
     try {
         feather.replace();
     } catch (e) {
         console.error("Feather icons failed to load or replace:", e);
     }
+    
+    // --- 5. Global Clerk User Button Mounting (NEW CRITICAL STEP) ---
+    const userControls = document.querySelector('.global-controls');
+    
+    // Function to check Clerk state and mount/unmount the UserButton
+    function renderClerkUserButton() {
+        if (!window.Clerk || !userControls) return;
 
-    // --- 4. Global Notification Panel Listener ---
-    const bellWrapper = document.querySelector('.global-controls .control-icon-wrapper');
+        // Check if the UserButton container already exists
+        let userButtonDiv = document.getElementById('clerk-user-button-container');
 
-    if (bellWrapper) {
-        bellWrapper.addEventListener('click', (event) => {
-            event.stopPropagation();
-            toggleNotificationPanel();
+        if (window.Clerk.user && window.Clerk.user.id) {
+            // User is signed in
+            if (!userButtonDiv) {
+                 // Create container if it doesn't exist
+                userButtonDiv = document.createElement('div');
+                userButtonDiv.id = 'clerk-user-button-container';
+                // Remove the old static image and bell wrapper placeholder if present
+                userControls.innerHTML = ''; 
+                userControls.appendChild(userButtonDiv);
+            }
+            // Mount the UserButton into the created container
+            window.Clerk.mountUserButton(userButtonDiv, {
+                 appearance: { elements: { userButtonAvatarBox: 'w-10 h-10' } }
+            });
+
+            // Ensure the profile name is correctly set for the settings page
+            updateUserProfileUI();
+            
+        } else {
+            // User is signed out or loading. Re-insert static elements.
+            if (userButtonDiv) {
+                userControls.innerHTML = `
+                    <div class="control-icon-wrapper"><i data-feather="bell"></i></div>
+                    <img src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic">
+                `;
+                 feather.replace(); // Replace feather icons after re-inserting HTML
+            }
+        }
+    }
+
+    // Attach listener to re-render the button whenever auth state changes (sign-in/out)
+    if (window.Clerk) {
+        window.Clerk.addListener(() => {
+            renderClerkUserButton();
+            // Also call the task check, as sign-in affects the overlay there
+            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+             if (currentPage === 'tasks.html' && typeof checkCalendarAccess === 'function') {
+                 // Call the function that hides the overlay and renders the calendar
+                 checkCalendarAccess(); 
+             }
         });
     }
 
-    // Hide panel if user clicks anywhere else on the page
-    document.addEventListener('click', () => {
-        const panel = document.getElementById('global-notification-panel');
-        if (panel && IS_NOTIFICATION_PANEL_OPEN && panel.classList.contains('active')) {
-            toggleNotificationPanel();
-        }
-    });
+    // Initial attempt to render the User Button once Clerk loads
+    renderClerkUserButton();
 
     // --- 3. Global Profile Update (NEW) ---
     updateUserProfileUI();
@@ -3149,7 +3422,7 @@ document.addEventListener('DOMContentLoaded', () => {
             initializeFinancePage();
             break;
         case 'fitness.html':
-            initializeFitnessPage();
+            initializeFitnessPage();a
             break;
         case 'mood.html':
             initializeMoodPage();

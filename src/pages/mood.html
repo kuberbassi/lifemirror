@@ -1,14 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mood - LifeMirror 3.0</title>
-    <link rel="stylesheet" href="style.css"> <script src="https://unpkg.com/feather-icons"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.auth0.com/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 </head>
+
 <body>
 
     <div class="modal-overlay" id="add-mood-modal" style="display: none;">
@@ -16,7 +22,8 @@
             <h3>Log Your Mood Entry</h3>
             <div class="modal-form-group" style="text-align: center;">
                 <label for="mood-select">How do you feel right now?</label>
-                <div id="mood-selector" style="display: flex; justify-content: space-around; font-size: 32px; margin-top: 10px;">
+                <div id="mood-selector"
+                    style="display: flex; justify-content: space-around; font-size: 32px; margin-top: 10px;">
                     <span data-mood="awful" title="Awful" style="cursor: pointer;">😞</span>
                     <span data-mood="sad" title="Sad" style="cursor: pointer;">🙁</span>
                     <span data-mood="neutral" title="Neutral" style="cursor: pointer;">😐</span>
@@ -25,8 +32,9 @@
                 </div>
                 <input type="hidden" id="current-mood-value">
             </div>
-             <p id="selected-mood-label" style="text-align: center; font-weight: 600; color: var(--c-primary); margin-top: 15px;">Neutral</p>
-             
+            <p id="selected-mood-label"
+                style="text-align: center; font-weight: 600; color: var(--c-primary); margin-top: 15px;">Neutral</p>
+
             <div class="modal-form-group">
                 <label for="mood-notes-input">Quick Note (Optional)</label>
                 <input type="text" id="mood-notes-input" placeholder="e.g., Stressed about project deadline.">
@@ -49,23 +57,28 @@
             <li class="menu-item" data-page="vault.html" title="Vault"><i data-feather="lock"></i></li>
             <li class="menu-item" data-page="insights.html" title="Insights"><i data-feather="bar-chart-2"></i></li>
         </ul>
-        <div class="sidebar-footer"><li class="menu-item" data-page="settings.html" title="Settings"><i data-feather="settings"></i></li></div>
+        <div class="sidebar-footer">
+            <li class="menu-item" data-page="settings.html" title="Settings"><i data-feather="settings"></i></li>
+        </div>
     </nav>
 
     <main class="main-content">
         <header class="top-bar">
             <div class="date-time"><span id="current-time">00:41</span><span>Sunday, 26 October 2025</span></div>
-            <div class="global-controls"><div class="control-icon-wrapper"><i data-feather="bell"></i></div><img src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic"></div>
+            <div class="global-controls">
+                <div class="control-icon-wrapper"><i data-feather="bell"></i></div><img
+                    src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic">
+            </div>
         </header>
         <div id="global-notification-panel"></div>
         <section class="hero-header">
-             <div class="hero-welcome">
+            <div class="hero-welcome">
                 <h2>Mood & Stress</h2>
                 <p>Your mental wellbeing and stress tracker.</p>
             </div>
-             <button class="add-new-button" id="add-mood-entry-button">
-                 <i data-feather="plus"></i> Add Mood Entry
-             </button>
+            <button class="add-new-button" id="add-mood-entry-button">
+                <i data-feather="plus"></i> Add Mood Entry
+            </button>
         </section>
 
         <section class="page-grid">
@@ -75,10 +88,10 @@
                 <p class="kpi-value" id="stress-index-value" style="color: var(--c-accent-yellow);">45%</p>
                 <p class="kpi-label" id="stress-index-label">Moderate</p>
             </div>
-            
+
             <div class="card" style="grid-column: span 2;">
                 <h3>Mood Trend</h3>
-                 <div class="chart-placeholder-large">
+                <div class="chart-placeholder-large">
                     <p>Emoji-based line graph showing mood over time</p>
                 </div>
             </div>
@@ -89,22 +102,27 @@
                     <li class="suggestion-item" data-status="pending" data-remedy="meditate">
                         <i data-feather="coffee"></i>
                         <p>Meditate 5 mins. (Suggested due to **High Stress**)</p>
-                        <button class="remedy-button" data-action="start" style="margin-left: auto;">Start</button> </li>
+                        <button class="remedy-button" data-action="start" style="margin-left: auto;">Start</button>
+                    </li>
                     <li class="suggestion-item" data-status="pending" data-remedy="break">
                         <i data-feather="wind"></i>
                         <p>Take a break. (Suggested due to **Task Overload**)</p>
-                        <button class="remedy-button" data-action="log" style="margin-left: auto;">Log Break</button> </li>
-                     <li class="suggestion-item" data-status="pending" data-remedy="read">
+                        <button class="remedy-button" data-action="log" style="margin-left: auto;">Log Break</button>
+                    </li>
+                    <li class="suggestion-item" data-status="pending" data-remedy="read">
                         <i data-feather="book-open"></i>
                         <p>Try reading for 15 minutes. (Suggested due to **Screen Time**)</p>
-                         <button class="remedy-button" data-action="log" style="margin-left: auto;">Log Reading</button> </li>
+                        <button class="remedy-button" data-action="log" style="margin-left: auto;">Log Reading</button>
+                    </li>
                 </ul>
             </div>
 
         </section>
-    </main> <script>
-      feather.replace()
+    </main>
+    <script>
+        feather.replace()
     </script>
-    <script src="script.js"></script>
+    <script src="/js/script.js"></script>
 </body>
+
 </html>

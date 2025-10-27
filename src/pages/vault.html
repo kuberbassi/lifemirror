@@ -4,26 +4,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Social Hub - LifeMirror 3.0</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Assets Vault - LifeMirror 3.0</title>
+    <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.auth0.com/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 </head>
 
 <body>
 
     <div class="modal-overlay" id="asset-modal" style="display: none;">
         <div class="modal-dialog" style="max-width: 450px;">
-            <h3 id="asset-modal-title">Add New Social Link</h3>
+            <h3 id="asset-modal-title">Add New Asset Link</h3>
             <input type="hidden" id="asset-id-input">
 
             <div class="modal-form-group">
-                <label for="asset-name-input">Platform Name</label>
-                <input type="text" id="asset-name-input" placeholder="e.g., Instagram, YouTube Channel">
+                <label for="asset-name-input">Asset Name / Description</label>
+                <input type="text" id="asset-name-input"
+                    placeholder="e.g., Passport renewal portal, Investment dashboard">
             </div>
 
             <div class="modal-form-row">
@@ -31,16 +33,18 @@
                     <label for="asset-type-select">Category</label>
                     <select id="asset-type-select">
                         <option value="Social">Social</option>
-                        <option value="Video">Video</option>
+                        <option value="Video">Video/Creative</option>
                         <option value="Messaging">Messaging</option>
                         <option value="Dev">Dev/Work</option>
+                        <option value="Document">Document/ID (Future)</option>
+                        <option value="Finance">Finance/Bill</option>
                     </select>
                 </div>
                 <div class="modal-form-group">
                     <label for="asset-icon-select">Icon Hint</label>
                     <select id="asset-icon-select">
                         <option value="instagram">Instagram</option>
-                        <option value="facebook">Facebook</option>
+                        <option value="file-text">Document/File</option>
                         <option value="youtube">YouTube</option>
                         <option value="message-square">WhatsApp/Chat</option>
                         <option value="github">GitHub</option>
@@ -118,7 +122,7 @@
             <li class="menu-item" data-page="finance.html" title="Finance"><i data-feather="credit-card"></i></li>
             <li class="menu-item" data-page="fitness.html" title="Fitness"><i data-feather="heart"></i></li>
             <li class="menu-item" data-page="mood.html" title="Mood"><i data-feather="smile"></i></li>
-            <li class="menu-item" data-page="vault.html" title="Vault"><i data-feather="lock"></i></li>
+            <li class="menu-item" data-page="vault.html" title="Assets Vault"><i data-feather="lock"></i></li>
             <li class="menu-item" data-page="insights.html" title="Insights"><i data-feather="bar-chart-2"></i></li>
         </ul>
         <div class="sidebar-footer">
@@ -137,8 +141,8 @@
         <div id="global-notification-panel"></div>
         <section class="hero-header">
             <div class="hero-welcome">
-                <h2>Social Hub & Speed Dial</h2>
-                <p>One-click access to your essential social media and web profiles.</p>
+                <h2>Assets Vault</h2>
+                <p>Your secure, centralized storage for links, files, and personal data.</p>
             </div>
             <button class="add-new-button" id="add-asset-button">
                 <i data-feather="plus"></i> Add New Link
@@ -151,12 +155,12 @@
                 <div class="search-filter-bar">
                     <div class="search-input-wrapper">
                         <i data-feather="search"></i>
-                        <input type="text" id="asset-search-input" placeholder="Search profiles...">
+                        <input type="text" id="asset-search-input" placeholder="Search assets...">
                     </div>
                     <div class="filter-bar" id="asset-filter-bar">
                         <span class="filter-item active" data-filter="All">All</span>
-                        <span class="filter-item" data-filter="Social">Social</span>
-                        <span class="filter-item" data-filter="Video">Video</span>
+                        <span class="filter-item" data-filter="Social">Social Links</span>
+                        <span class="filter-item" data-filter="Video">Creative/Video</span>
                         <span class="filter-item" data-filter="Messaging">Messaging</span>
                         <span class="filter-item" data-filter="Dev">Dev/Work</span>
                     </div>
@@ -177,7 +181,7 @@
     <script>
         feather.replace()
     </script>
-    <script src="script.js"></script>
+    <script src="/js/script.js"></script>
 </body>
 
 </html>

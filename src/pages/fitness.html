@@ -5,23 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fitness - LifeMirror 3.0</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.auth0.com/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 </head>
 
 <body>
-    
+
     <div id="flash-message-container"></div>
-    
+
     <div class="modal-overlay" id="log-activity-modal" style="display: none;">
         <div class="modal-dialog" style="max-width: 450px;">
             <h3>Add New Activity Entry</h3>
-            
+
             <div class="modal-form-group">
                 <label for="activity-type-select">Activity Type</label>
                 <select id="activity-type-select">
@@ -49,14 +50,15 @@
             </div>
         </div>
     </div>
-    
+
     <div class="modal-overlay" id="log-water-modal" style="display: none;">
         <div class="modal-dialog" style="max-width: 400px;">
             <h3>Log Water Intake</h3>
-            
+
             <div class="modal-form-group">
                 <label>Quick Log Options (ml)</label>
-                <div id="water-quick-select" style="display: flex; gap: 10px; justify-content: center; margin-top: 8px;">
+                <div id="water-quick-select"
+                    style="display: flex; gap: 10px; justify-content: center; margin-top: 8px;">
                     <button class="modal-button secondary water-option" data-volume="250">250 ml</button>
                     <button class="modal-button secondary water-option" data-volume="500">500 ml</button>
                     <button class="modal-button secondary water-option" data-volume="750">750 ml</button>
@@ -74,7 +76,7 @@
             </div>
         </div>
     </div>
-    
+
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
         <ul class="sidebar-menu" id="sidebar-menu">
@@ -114,9 +116,9 @@
                 </button>
             </div>
         </section>
-        
+
         <section class="page-grid">
-            
+
             <div class="fitness-stats" style="grid-column: span 3; grid-template-columns: repeat(5, 1fr);">
                 <div class="card kpi-card">
                     <p class="kpi-label">Steps Today</p>
@@ -172,17 +174,18 @@
                     </li>
                 </ul>
             </div>
-            
+
             <div class="card" style="grid-column: span 3;">
                 <div class="card-header">
                     <h3>Daily Log History</h3>
                     <button class="add-new-button secondary view-log-toggle" data-action="hide">
-                         <i data-feather="chevron-up"></i> Hide Log
+                        <i data-feather="chevron-up"></i> Hide Log
                     </button>
                 </div>
                 <ul class="log-list" id="daily-log-list">
-                    </ul>
-                <div class="placeholder-text" id="log-history-empty" style="display: none; margin-top: 12px;">No activity logged today.</div>
+                </ul>
+                <div class="placeholder-text" id="log-history-empty" style="display: none; margin-top: 12px;">No
+                    activity logged today.</div>
             </div>
 
         </section>
@@ -190,7 +193,7 @@
     <script>
         feather.replace()
     </script>
-    <script src="script.js"></script>
+    <script src="/js/script.js"></script>
 </body>
 
 </html>

@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Insights - LifeMirror 3.0</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/feather-icons"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.auth0.com/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 </head>
+
 <body>
     <nav class="sidebar">
         <div class="sidebar-logo"><i data-feather="feather"></i></div>
@@ -17,16 +22,21 @@
             <li class="menu-item" data-page="finance.html" title="Finance"><i data-feather="credit-card"></i></li>
             <li class="menu-item" data-page="fitness.html" title="Fitness"><i data-feather="heart"></i></li>
             <li class="menu-item" data-page="mood.html" title="Mood"><i data-feather="smile"></i></li>
-            <li class="menu-item" data-page="vault.html" title="Vault"><i data-feather="lock"></i></li>
+            <li class="menu-item" data-page="vault.html" title="Assets Vault"><i data-feather="lock"></i></li>
             <li class="menu-item" data-page="insights.html" title="Insights"><i data-feather="bar-chart-2"></i></li>
         </ul>
-        <div class="sidebar-footer"><li class="menu-item" data-page="settings.html" title="Settings"><i data-feather="settings"></i></li></div>
+        <div class="sidebar-footer">
+            <li class="menu-item" data-page="settings.html" title="Settings"><i data-feather="settings"></i></li>
+        </div>
     </nav>
 
     <main class="main-content">
         <header class="top-bar">
             <div class="date-time"><span id="current-time">12:46</span><span>Sunday, 26 October 2025</span></div>
-            <div class="global-controls"><div class="control-icon-wrapper"><i data-feather="bell"></i></div><img src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic"></div>
+            <div class="global-controls">
+                <div class="control-icon-wrapper"><i data-feather="bell"></i></div><img
+                    src="https://i.pravatar.cc/40?u=kuber" alt="Profile" class="profile-pic">
+            </div>
         </header>
         <div id="global-notification-panel"></div>
         <section class="hero-header">
@@ -44,38 +54,53 @@
                 <p class="kpi-label">Productivity Trend</p>
                 <p class="kpi-value" style="color: var(--c-primary);">↑ 15%</p>
             </div>
-             <div class="card kpi-card">
+            <div class="card kpi-card">
                 <p class="kpi-label">Wellbeing Trend</p>
                 <p class="kpi-value">Stable</p>
             </div>
             <div class="card kpi-card">
-                 <p class="kpi-label">Achievements</p>
-                 <div class="badge-placeholder">
-                     <i data-feather="award" style="color: gold;"></i>
-                     <i data-feather="award" style="color: silver;"></i>
-                     <i data-feather="award" style="color: #cd7f32;"></i>
-                     <span>+2 more</span>
-                 </div>
+                <p class="kpi-label">Achievements</p>
+                <div class="badge-placeholder">
+                    <i data-feather="award" style="color: gold;"></i>
+                    <i data-feather="award" style="color: silver;"></i>
+                    <i data-feather="award" style="color: #cd7f32;"></i>
+                    <span>+2 more</span>
+                </div>
             </div>
 
             <div class="card" style="grid-column: span 2;">
                 <h3>Weekly Summary Charts</h3>
                 <div class="chart-placeholder-large chart-visual">
                     <p>Weekly Trends</p>
-                    <div class="chart-bars"><div></div><div></div><div></div><div></div><div></div></div>
+                    <div class="chart-bars">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
                 </div>
             </div>
 
             <div class="card" style="grid-column: span 2;">
                 <h3>AI Recommendation Feed</h3>
                 <ul class="remedy-list">
-                    <li class="remedy-item" data-status="finance"><i data-feather="alert-triangle"></i><p>Overdue: Netflix Bill. Pay Now.</p><button class="remedy-button">Pay</button></li>
-                     <li class="remedy-item" data-status="health"><i data-feather="moon"></i><p>Low Sleep trend. Adjust bedtime.</p><button class="remedy-button">Plan</button></li>
-                     <li class="remedy-item" data-status="task"><i data-feather="alert-circle"></i><p>Project Report is frequently late.</p><button class="remedy-button">Review</button></li>
+                    <li class="remedy-item" data-status="finance"><i data-feather="alert-triangle"></i>
+                        <p>Overdue: Netflix Bill. Pay Now.</p><button class="remedy-button">Pay</button>
+                    </li>
+                    <li class="remedy-item" data-status="health"><i data-feather="moon"></i>
+                        <p>Low Sleep trend. Adjust bedtime.</p><button class="remedy-button">Plan</button>
+                    </li>
+                    <li class="remedy-item" data-status="task"><i data-feather="alert-circle"></i>
+                        <p>Project Report is frequently late.</p><button class="remedy-button">Review</button>
+                    </li>
                 </ul>
             </div>
 
-        </section> </main> <script>feather.replace()</script>
-    <script src="script.js"></script>
+        </section>
+    </main>
+    <script>feather.replace()</script>
+    <script src="/js/script.js"></script>
 </body>
+
 </html>
