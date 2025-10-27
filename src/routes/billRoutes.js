@@ -5,7 +5,7 @@ const router = express.Router();
 // GET all bills for the user
 router.get('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const bills = await Bill.find({ auth0Id })
             .select('-auth0Id -__v')
             .sort({ dueDate: 1 });
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 // POST a new bill
 router.post('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const newBill = new Bill({
             ...req.body,
             auth0Id
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
 // PUT (update) an existing bill
 router.put('/:id', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const billId = req.params.id;
         const updateData = req.body;
 
@@ -58,7 +58,7 @@ router.put('/:id', async (req, res) => {
 // DELETE a bill
 router.delete('/:id', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const billId = req.params.id;
 
         const result = await Bill.findOneAndDelete({ _id: billId, auth0Id });

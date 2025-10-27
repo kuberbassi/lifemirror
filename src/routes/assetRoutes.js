@@ -5,7 +5,7 @@ const router = express.Router();
 // GET all assets for the user
 router.get('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const assets = await Asset.find({ auth0Id })
             .select('-auth0Id -__v')
             .sort({ type: 1, name: 1 });
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 // POST a new asset
 router.post('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const newAsset = new Asset({
             ...req.body,
             auth0Id
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
 // PUT (update) an existing asset
 router.put('/:id', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const assetId = req.params.id;
         const updateData = req.body;
 
@@ -58,7 +58,7 @@ router.put('/:id', async (req, res) => {
 // DELETE an asset
 router.delete('/:id', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const assetId = req.params.id;
 
         const result = await Asset.findOneAndDelete({ _id: assetId, auth0Id });

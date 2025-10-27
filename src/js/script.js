@@ -8,6 +8,7 @@ let IS_SMART_NOTIFICATIONS_MOCK = true; // Kept from original, controls mock not
 let IS_NOTIFICATION_PANEL_OPEN = false;
 let activeTimer = null; // Holds interval ID for meditation timer
 
+
 // --- GLOBAL DATA STATE (Populated by API) ---
 let taskState = [];
 let billState = [];
@@ -446,13 +447,9 @@ async function syncApplicationState() {
         fitnessHistory = (data.fitnessLogs || []).map(f => ({ ...f, id: f._id }));
         moodHistory = (data.moodLogs || []).map(m => ({ ...m, id: m._id }));
 
-        // Add client-side mood placeholder if needed
-        const latestMood = moodHistory.length > 0 ? moodHistory[0] : null;
-        if (!latestMood || latestMood.date !== TODAY_DATE) {
-            const placeholder = { _id: 'temp-mood', id: 'temp-mood', date: TODAY_DATE, mood: 2, note: 'Daily check-in pending.', stress: 45, isFinal: false };
-            moodHistory.unshift(placeholder);
-            console.log("Added temporary mood placeholder.");
-        }
+        // [REMOVED] Redundant frontend mood placeholder logic is gone.
+        // The backend now provides this placeholder if needed.
+
         console.log('✅ Application state synced.');
     } catch (error) {
         console.error('FATAL: Could not sync application state.', error.message);
@@ -484,14 +481,9 @@ async function refreshState(stateName) {
         const data = await service.fetchAll();
         window[stateVar] = data.map(d => ({ ...d, id: d._id }));
 
-        if (stateName === 'mood') {
-            const latestMood = moodHistory.length > 0 ? moodHistory[0] : null;
-            if (!latestMood || latestMood.date !== TODAY_DATE) {
-                const placeholder = { _id: 'temp-mood', id: 'temp-mood', date: TODAY_DATE, mood: 2, note: 'Daily check-in pending.', stress: 45, isFinal: false };
-                moodHistory.unshift(placeholder);
-                console.log("Re-added mood placeholder after refresh.");
-            }
-        }
+        // [REMOVED] Redundant mood placeholder logic removed.
+        // The API response from 'moodApiService.fetchAll()' will now 
+        // contain the correct placeholder from the backend.
 
         // Trigger UI Re-render based on current page
         const currentPage = window.location.pathname.split('/').pop() || 'index.html';
@@ -578,10 +570,10 @@ function calculateNextDueDate(currentDueDate, frequency) {
 
 
 // --- Notification Panel & Sleep Check (Mocks/Placeholders) ---
-function toggleNotificationPanel() {
+function toggleNotificationPanel() { 
     const panel = document.getElementById('global-notification-panel');
     if (!panel) return;
-
+    
     // Find the bell icon itself to position the panel
     const bellIcon = document.querySelector('.global-controls .control-icon-wrapper');
     if (bellIcon) {
@@ -592,7 +584,7 @@ function toggleNotificationPanel() {
 
     IS_NOTIFICATION_PANEL_OPEN = !IS_NOTIFICATION_PANEL_OPEN;
     panel.style.display = IS_NOTIFICATION_PANEL_OPEN ? 'flex' : 'none';
-
+    
     if (IS_NOTIFICATION_PANEL_OPEN) {
         renderNotificationPanel(panel); // Render content when opening
     }
@@ -600,16 +592,16 @@ function toggleNotificationPanel() {
 
 function renderNotificationPanel(panel) {
     if (!panel) return;
-
+    
     // This data would eventually come from a 'notifications' state
     const notifications = [
         { id: 1, type: 'critical', text: 'Bill "Netflix" is overdue!' },
         { id: 2, type: 'low', text: 'Task "Buy groceries" due today.' },
         { id: 3, type: 'low', text: '5,000 steps reached!' },
     ];
-
+    
     panel.innerHTML = '<h4>Notifications</h4>'; // Clear/add title
-
+    
     if (notifications.length === 0) {
         panel.innerHTML += '<div class="notification-item-empty">No new notifications.</div>';
         return;
@@ -624,7 +616,7 @@ function renderNotificationPanel(panel) {
         `;
         panel.appendChild(item);
     });
-    try { feather.replace(); } catch (e) { }
+    try { feather.replace(); } catch(e) {}
 }
 function startSleepNotificationCheck() { console.log("Start Sleep Check (Mock)"); /* ... (implementation needed) ... */ }
 
@@ -644,78 +636,6 @@ async function addNewTaskFromVault(text, duration) {
     } catch (error) {
         console.error("Failed to add task from Vault:", error);
         // Flash message shown by API service on error
-    }
-}
-
-/**
- * Starts a countdown timer on a remedy button.
- */
-function startTimer(button, durationMinutes, initialText) {
-    if (activeTimer) return alert("Timer already running!");
-
-    let totalSeconds = durationMinutes * 60;
-    button.disabled = true;
-
-    activeTimer = setInterval(() => {
-        totalSeconds--;
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        button.textContent = `Active: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-        if (totalSeconds <= 0) {
-            // Pass 'originalText' so markRemedyComplete knows what was completed
-            markRemedyComplete(button, originalText, 'timer');
-        }
-    }, 1000);
-}
-
-/**
- * Marks a remedy as complete and logs the activity.
- */
-async function markRemedyComplete(button, originalText, type) {
-    if (activeTimer && type === 'timer') {
-        clearInterval(activeTimer);
-        activeTimer = null;
-    }
-
-    button.textContent = 'Completed';
-    button.disabled = true;
-    button.closest('.suggestion-item')?.classList.add('completed');
-
-    let logType, logValue, logUnit, successMsg, remedyText;
-
-    // Get the text from the <p> tag, not the button
-    remedyText = button.closest('.suggestion-item')?.querySelector('p')?.textContent || '';
-
-    if (type === 'timer') {
-        // This was the meditation timer
-        logType = 'workout'; // Log meditation as a 'workout'
-        logValue = parseInt(remedyText.match(/\d+/)[0] || 5); // Get duration from text like "Meditate 5 mins."
-        logUnit = 'min';
-        successMsg = 'Meditation logged!';
-    } else {
-        // This was a 'log' type (break or read)
-        logValue = 15; // Default 15 min
-        logUnit = 'min';
-
-        if (remedyText.toLowerCase().includes('break')) {
-            logType = 'workout'; // Log as 'workout'
-            successMsg = 'Break logged!';
-        } else if (remedyText.toLowerCase().includes('read')) {
-            logType = 'workout'; // Log as 'workout'
-            successMsg = 'Reading logged!';
-        }
-    }
-
-    // Use the existing fitness logger
-    if (logType) {
-        // We log 'break' and 'reading' as generic workouts
-        await logFitnessEntry(logType, logValue, logUnit);
-        showFlashMessage(successMsg, 'check-circle');
-
-        // Refresh mood and fitness to show new data
-        await refreshState('mood');
-        await refreshState('fitness');
     }
 }
 
@@ -1863,23 +1783,27 @@ function initializeMoodPage() {
             if (remedyItem.classList.contains('completed')) return; // Skip completed items
 
             newButton.addEventListener('click', (e) => {
-                // (This replaces lines 1547-1562 in script.js)
-
                 const remedyType = remedyItem.dataset.remedy;
-                const originalText = newButton.textContent;
+                const originalText = newButton.textContent; // Store original text before starting timer
                 let duration = 0;
+                if (remedyType === 'meditate') duration = 5;
+                // else if (remedyType === 'read') duration = 15; // Reading is logged, not timed here
 
-                if (remedyType === 'meditate') {
-                    // Extract duration from the <p> tag's text, e.g., "Meditate 5 mins."
-                    const remedyText = remedyItem.querySelector('p')?.textContent || '';
-                    duration = parseInt(remedyText.match(/\d+/)[0] || 5);
-                }
+                if (activeTimer && duration > 0) return alert("Timer already running!");
 
                 if (duration > 0) {
-                    // This is a timed event (meditation)
-                    startTimer(newButton, duration, originalText);
+                    // startTimer(newButton, duration, originalText); // Start timer (meditate)
+                    // Placeholder for timer logic
+                    showFlashMessage(`Starting ${duration} min meditation (mock)...`, 'clock');
+                    newButton.disabled = true;
+                    setTimeout(() => {
+                        markRemedyComplete(newButton, originalText, 'timer');
+                        activeTimer = null;
+                    }, 1000); // Short mock timer
                 } else {
-                    // This is an instant log event (break, read)
+                    // markRemedyComplete(newButton, originalText, 'log'); // Log break/read
+                    // Placeholder for logging
+                    showFlashMessage(`${remedyType === 'break' ? 'Break' : 'Reading'} logged (mock).`, 'check');
                     markRemedyComplete(newButton, originalText, 'log');
                 }
             });

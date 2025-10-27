@@ -5,7 +5,7 @@ const router = express.Router();
 // GET all mood logs for the user
 router.get('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const logs = await MoodLog.find({ auth0Id })
             .select('-auth0Id -__v')
             .sort({ date: -1 });
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 // or create a new one.
 router.post('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const { date, mood, note, stress, isFinal } = req.body;
 
         // Try to find and update an existing non-final log for today

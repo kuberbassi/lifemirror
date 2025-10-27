@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         // The authenticated user's unique Auth0 ID is available in req.auth.payload.sub
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         
         // Fetch all tasks belonging to this user
         const tasks = await Task.find({ auth0Id: auth0Id })
@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 // =========================================================
 router.post('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const { text, priority, date, type, completed = false } = req.body;
 
         const newTask = new Task({
@@ -58,7 +58,7 @@ router.post('/', async (req, res) => {
 // =========================================================
 router.put('/:id', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const taskId = req.params.id;
         const updateData = req.body;
 
@@ -86,7 +86,7 @@ router.put('/:id', async (req, res) => {
 // =========================================================
 router.delete('/:id', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const taskId = req.params.id;
 
         const result = await Task.findOneAndDelete({ 

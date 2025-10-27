@@ -5,7 +5,7 @@ const router = express.Router();
 // GET all fitness logs for the user
 router.get('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const logs = await FitnessLog.find({ auth0Id })
             .select('-auth0Id -__v')
             .sort({ date: -1, time: -1 });
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 // POST a new fitness log
 router.post('/', async (req, res) => {
     try {
-        const auth0Id = req.auth.payload.sub;
+        const auth0Id = req.auth.sub;
         const newLog = new FitnessLog({
             ...req.body,
             auth0Id
