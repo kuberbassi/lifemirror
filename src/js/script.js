@@ -320,7 +320,16 @@ function initializeLoginPage() {
  * Creates a generic API service. Includes error handling.
  */
 function createApiService(resourceName) {
-    const baseUrl = `/api/${resourceName}`;
+    // 💡 FIX: Use the correct collection names from your MongoDB
+    let collectionName = resourceName;
+    if (resourceName === 'fitness-logs') {
+        collectionName = 'fitnesslogs'; // No hyphen
+    }
+    if (resourceName === 'mood-logs') {
+        collectionName = 'moodlogs'; // No hyphen
+    }
+
+    const baseUrl = `/api/${collectionName}`; // Use the corrected name
 
     // Centralized response handler
     const handleResponse = async (response, operation) => {
@@ -339,7 +348,7 @@ function createApiService(resourceName) {
                     const errorText = await response.text();
                     if (errorText) errorDetails = errorText;
                 } catch (textErr) { /* Ignore further errors reading body */ }
-                 errorMsg += `: ${errorDetails}`;
+                errorMsg += `: ${errorDetails}`;
             }
             console.error(`${operation} ${resourceName} failed:`, errorMsg);
             // Specific error types for better handling upstream
@@ -376,7 +385,6 @@ function createApiService(resourceName) {
                 return await handleResponse(response, 'fetch');
             } catch (error) {
                 console.error(`API Error (Fetch ${resourceName}):`, error.message);
-                // Avoid redundant alerts if it's an auth issue handled by getAccessToken
                 if (error.message !== 'Login required' && error.message !== 'Unauthorized') {
                     showFlashMessage(`Error loading ${resourceName}. Check console.`, 'alert-triangle');
                 }
@@ -407,12 +415,10 @@ function createApiService(resourceName) {
             const method = isTempMoodUpdate ? 'POST' : 'PUT';
 
             // Basic validation for non-temp IDs
-             if (!isTempMoodUpdate && (!id || !mongoose.Types.ObjectId.isValid(id))) {
-                 console.warn(`Update ${resourceName} skipped: Invalid ID format "${id}"`);
-                 // Decide whether to throw or return null/error indicator
-                 // Returning null might hide bugs, throwing might be better
-                 throw new Error(`Invalid ID format for update: ${id}`);
-             }
+            if (!isTempMoodUpdate && (!id || !mongoose.Types.ObjectId.isValid(id))) {
+                console.warn(`Update ${resourceName} skipped: Invalid ID format "${id}"`);
+                throw new Error(`Invalid ID format for update: ${id}`);
+            }
 
             try {
                 const token = await getAccessToken();
@@ -453,7 +459,6 @@ function createApiService(resourceName) {
         }
     };
 }
-
 
 // --- Mongoose ObjectId Stub for basic validation ---
 // Lightweight check without needing the full library on frontend

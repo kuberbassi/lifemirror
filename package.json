@@ -10,10 +10,11 @@
   "dependencies": {
     "@auth0/auth0-spa-js": "^2.8.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "express-jwt": "^8.4.1",
     "jwks-rsa": "^3.1.0",
+    "mongodb": "^6.20.0",
     "mongoose": "^8.4.1"
   },
   "devDependencies": {
