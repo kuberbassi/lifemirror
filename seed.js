@@ -1,9 +1,9 @@
 /*
  * ========================================
- * LifeMirror MONGODB SEEDER SCRIPT (v2 - 30 Days)
+ * LifeMirror MONGODB SEEDER SCRIPT (v3 - 365 Days)
  * ========================================
  *
- * This script injects 30 days of mock data for 2 users
+ * This script injects 365 days of mock data for 2 users
  * for presentation purposes.
  *
  * TO RUN:
@@ -21,14 +21,17 @@ const { MongoClient } = require('mongodb');
 
 const CONFIG = {
     // ✅ This will now be read automatically from your .env file
-    MONGO_URI: process.env.MONGO_URI, 
+    MONGO_URI: process.env.MONGO_URI,
 
     // 💡 FIX #1: Pointing the seeder to your 'test' database
-    DB_NAME: "test", 
+    DB_NAME: "test",
 
     // 💡 FIX #2: Corrected your Auth0 ID (3068 instead of 3066)
     USER_ONE_AUTH_ID: "google-oauth2|114177825713068485063", // Kuber Bassi
-    USER_TWO_AUTH_ID: "google-oauth2|109860976003764099748"  // Smarth Sharma
+    USER_TWO_AUTH_ID: "google-oauth2|109860976003764099748",  // Smarth Sharma
+
+    // 💡 NEW: Set the number of days to seed. 365 days = 1 year
+    TOTAL_DAYS: 365
 };
 
 // ================================================================
@@ -59,12 +62,13 @@ const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 // --- Mock Data Generation ---
 
 /**
- * Generates a full 30-day data profile for a user
+ * Generates a full data profile for a user
  * @param {string} auth0Id - The user's Auth0 ID
  * @param {'dev' | 'fitness'} profileType - The type of profile to generate
  */
 const generateMockData = (auth0Id, profileType) => {
-    console.log(`- Generating 30 DAYS of data for ${profileType} profile...`);
+    // 💡 NEW: Using CONFIG.TOTAL_DAYS
+    console.log(`- Generating ${CONFIG.TOTAL_DAYS} DAYS of data for ${profileType} profile...`);
     let data = {
         tasks: [],
         bills: [],
@@ -97,23 +101,43 @@ const generateMockData = (auth0Id, profileType) => {
             { auth0Id, name: "LinkedIn Profile", type: 'Social', icon: 'linkedin', url: 'https://linkedin.com' },
             { auth0Id, name: "Twitter / X", type: 'Social', icon: 'twitter', url: 'https://x.com' },
         ];
-        
-        // 30 Days of History
-        for (let i = 29; i >= 0; i--) {
-            let date = getDateString(i);
+
+        // 💡 NEW: Loop for CONFIG.TOTAL_DAYS (e.g., 365 days)
+        for (let i = (CONFIG.TOTAL_DAYS - 1); i >= 0; i--) {
+            // 💡 NEW: Get date object and day of week to create realistic weekly cycles
+            const dateObj = new Date();
+            dateObj.setDate(dateObj.getDate() - i);
+            const date = dateObj.toISOString().split('T')[0];
+            const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
+            // 💡 NEW: Realistic data based on weekday/weekend
+            let stress, mood, steps, sleep, note;
+            if (isWeekend) {
+                stress = randInt(25, 50); // Lower stress on weekends
+                mood = randInt(3, 4);     // Happy/Great
+                steps = randInt(7000, 11000); // More walking
+                sleep = randInt(7, 9);    // Sleep in
+                note = "Relaxing on the weekend.";
+            } else {
+                stress = randInt(50, 85); // Higher stress from work/college
+                mood = (stress > 70) ? 2 : 3; // Neutral or Sad if very stressed
+                steps = randInt(4000, 7000); // Less walking
+                sleep = randInt(6, 8);    // Normal work sleep
+                note = "Busy with project work.";
+            }
+
             // Mood: Once per day
-            let stress = randInt(45, 75); // Higher stress
-            let mood = (stress > 60) ? 2 : 3; // Neutral or Happy
-            data.moodLogs.push({ auth0Id, date, mood, stress, note: "Busy with project work.", isFinal: true });
+            data.moodLogs.push({ auth0Id, date, mood, stress, note, isFinal: true });
 
             // Fitness: Multiple logs per day
-            data.fitnessLogs.push({ auth0Id, date, time: '09:00', type: 'steps', value: randInt(5000, 8000), unit: 'steps' });
+            data.fitnessLogs.push({ auth0Id, date, time: '09:00', type: 'steps', value: steps, unit: 'steps' });
             data.fitnessLogs.push({ auth0Id, date, time: '10:00', type: 'water_intake', value: 500, unit: 'ml' });
             data.fitnessLogs.push({ auth0Id, date, time: '14:00', type: 'water_intake', value: 500, unit: 'ml' });
             data.fitnessLogs.push({ auth0Id, date, time: '18:00', type: 'water_intake', value: 500, unit: 'ml' });
-            data.fitnessLogs.push({ auth0Id, date, time: '23:00', type: 'sleep', value: randInt(6, 8), unit: 'hours' }); // 6-8 hrs
+            data.fitnessLogs.push({ auth0Id, date, time: '23:00', type: 'sleep', value: sleep, unit: 'hours' });
             data.fitnessLogs.push({ auth0Id, date, time: '19:00', type: 'calories_out', value: randInt(1800, 2200), unit: 'kcal' });
-            
+
             if (i % 3 === 0) { // Workout every 3 days
                 data.fitnessLogs.push({ auth0Id, date, time: '18:00', type: 'workout', value: 45, unit: 'min' });
             }
@@ -139,30 +163,43 @@ const generateMockData = (auth0Id, profileType) => {
             { auth0Id, name: "Gym Workout Plan", type: 'Health', icon: 'check-square', url: 'https://docs.google.com' },
             { auth0Id, name: "Instagram", type: 'Social', icon: 'instagram', url: 'https://instagram.com' },
         ];
-        
-        // 30 Days of History
-        for (let i = 29; i >= 0; i--) {
-            let date = getDateString(i);
+
+        // 💡 NEW: Loop for CONFIG.TOTAL_DAYS (e.g., 365 days)
+        for (let i = (CONFIG.TOTAL_DAYS - 1); i >= 0; i--) {
+            // 💡 NEW: Get date object and day of week
+            const dateObj = new Date();
+            dateObj.setDate(dateObj.getDate() - i);
+            const date = dateObj.toISOString().split('T')[0];
+            const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
+            // 💡 NEW: Realistic data based on weekday/weekend
+            let stress = randInt(15, 35); // Always low stress
+            let mood = randInt(3, 4);     // Always good
+            let note = "Feeling energetic!";
+            let steps = isWeekend ? randInt(14000, 20000) : randInt(10000, 15000); // More steps on weekend
+
             // Mood: Once per day
-            let stress = randInt(20, 40); // Lower stress
-            let mood = randInt(3, 4); // Happy or Great
-            data.moodLogs.push({ auth0Id, date, mood, stress, note: "Feeling energetic!", isFinal: true });
+            data.moodLogs.push({ auth0Id, date, mood, stress, note, isFinal: true });
 
             // Fitness: Multiple logs per day
-            data.fitnessLogs.push({ auth0Id, date, time: '07:00', type: 'steps', value: randInt(10000, 15000), unit: 'steps' });
+            data.fitnessLogs.push({ auth0Id, date, time: '07:00', type: 'steps', value: steps, unit: 'steps' });
             data.fitnessLogs.push({ auth0Id, date, time: '09:00', type: 'water_intake', value: 1000, unit: 'ml' });
             data.fitnessLogs.push({ auth0Id, date, time: '13:00', type: 'water_intake', value: 1000, unit: 'ml' });
             data.fitnessLogs.push({ auth0Id, date, time: '17:00', type: 'water_intake', value: 1000, unit: 'ml' });
-            data.fitnessLogs.push({ auth0Id, date, time: '22:00', type: 'sleep', value: randInt(7, 9), unit: 'hours' }); // 7-9 hrs
+            data.fitnessLogs.push({ auth0Id, date, time: '22:00', type: 'sleep', value: randInt(7, 9), unit: 'hours' }); // Consistent sleep
             data.fitnessLogs.push({ auth0Id, date, time: '18:00', type: 'calories_out', value: randInt(2500, 3000), unit: 'kcal' });
-            
+
             if (i % 2 === 0) { // Workout every 2 days
-                data.fitnessLogs.push({ auth0Id, date, time: '17:00', type: 'workout', value: 60, unit: 'min' });
+                // 💡 NEW: Longer workouts on the weekend
+                let workoutValue = isWeekend ? randInt(60, 90) : randInt(45, 60);
+                let workoutTime = isWeekend ? '10:00' : '17:00';
+                data.fitnessLogs.push({ auth0Id, date, time: workoutTime, type: 'workout', value: workoutValue, unit: 'min' });
             }
         }
     }
 
-    // Add random times to all fitness logs
+    // Add random times to all fitness logs (that don't have one)
     data.fitnessLogs.forEach(log => {
         if (!log.time) log.time = getRandomTime();
     });
@@ -175,7 +212,6 @@ const generateMockData = (auth0Id, profileType) => {
 
 async function seedDatabase() {
     // Check config
-    // 💡 FIX: Updated validation check
     if (!CONFIG.MONGO_URI || !CONFIG.MONGO_URI.startsWith('mongodb')) {
         console.error('❌ ERROR: Please make sure your MONGO_URI is set correctly in your .env file!');
         return;
@@ -188,13 +224,12 @@ async function seedDatabase() {
         const db = client.db(CONFIG.DB_NAME);
         console.log(`✅ Connected successfully to database: ${CONFIG.DB_NAME}`);
 
-        // Get collections (they will be created if they don't exist)
-        // 💡 FIX: Using correct collection names (no hyphens)
+        // Get collections
         const tasksCol = db.collection('tasks');
         const billsCol = db.collection('bills');
         const assetsCol = db.collection('assets');
-        const fitnessLogsCol = db.collection('fitnesslogs'); // NO HYPHEN
-        const moodLogsCol = db.collection('moodlogs');     // NO HYPHEN
+        const fitnessLogsCol = db.collection('fitnesslogs');
+        const moodLogsCol = db.collection('moodlogs');
 
         // --- 1. Clear Old Mock Data ---
         console.log('🧹 Clearing old data for mock users...');
@@ -207,7 +242,8 @@ async function seedDatabase() {
         console.log(`- Deleted ${taskDel.deletedCount} tasks, ${billDel.deletedCount} bills, ${assetDel.deletedCount} assets, ${fitDel.deletedCount} fitnesslogs, ${moodDel.deletedCount} moodlogs.`);
 
         // --- 2. Generate New Data ---
-        console.log('🌱 Generating new 30-DAY mock data...');
+        // 💡 NEW: Using CONFIG.TOTAL_DAYS in log
+        console.log(`🌱 Generating new ${CONFIG.TOTAL_DAYS}-DAY mock data...`);
         const userOneData = generateMockData(CONFIG.USER_ONE_AUTH_ID, 'dev');
         const userTwoData = generateMockData(CONFIG.USER_TWO_AUTH_ID, 'fitness');
 
@@ -228,7 +264,8 @@ async function seedDatabase() {
         if (userTwoData.moodLogs.length > 0) await moodLogsCol.insertMany(userTwoData.moodLogs);
         console.log('- User 2 data inserted.');
 
-        console.log('\n✨✨✨ Database 30-DAY seeding complete! ✨✨✨');
+        // 💡 NEW: Using CONFIG.TOTAL_DAYS in log
+        console.log(`\n✨✨✨ Database ${CONFIG.TOTAL_DAYS}-DAY seeding complete! ✨✨✨`);
 
     } catch (err) {
         console.error('An error occurred during seeding:', err);
