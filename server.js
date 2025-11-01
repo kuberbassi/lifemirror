@@ -38,9 +38,51 @@ mongoose.connect(MONGO_URI)
     });
 
 // =======================================================
-// 2. Middleware Setup
+// 2. Middleware Setup - CRITICAL CORS FIX APPLIED HERE
 // =======================================================
-app.use(cors());
+
+// Allowed origins array for production deployment
+const allowedOrigins = [
+    'http://localhost:5000',
+    'https://lifemirror-theta.vercel.app', 
+    'https://lifemirror.vercel.app',
+    // Regex to cover all Vercel Preview Deployments 
+    /https:\/\/lifemirror(-[a-z0-9]+)?\.vercel\.app$/ 
+];
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true); 
+        
+        let isAllowed = false;
+
+        // 1. Check static origins
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            isAllowed = true;
+        }
+
+        // 2. Check regex patterns
+        if (!isAllowed) {
+             for (const allowedOrigin of allowedOrigins) {
+                 if (allowedOrigin instanceof RegExp && allowedOrigin.test(origin)) {
+                     isAllowed = true;
+                     break;
+                 }
+             }
+        }
+
+        if (!isAllowed) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE", 
+    credentials: true, 
+};
+
+app.use(cors(corsOptions)); // Use the configured CORS middleware
 app.use(express.json());
 
 // =======================================================
@@ -156,7 +198,7 @@ app.use('/api/tasks', checkJwt, taskRoutes);
 app.use('/api/bills', checkJwt, billRoutes);
 app.use('/api/assets', checkJwt, assetRoutes);
 app.use('/api/fitness-logs', checkJwt, fitnessRoutes);
-app.use('/api/mood-logs', checkJwt, moodRoutes); // <-- Correctly uses /api/mood-logs
+app.use('/api/mood-logs', checkJwt, moodRoutes); 
 app.use('/api/dashboard', checkJwt, dashboardRoutes);
 
 // =======================================================
