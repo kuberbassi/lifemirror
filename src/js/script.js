@@ -24,7 +24,8 @@ window.AUTH0_AUDIENCE = window.AUTH0_AUDIENCE || "https://lifemirror-api.com";
 // Backend base URL (auto for local or production)
 window.API_BASE_URL = window.location.origin.includes('localhost')
     ? "http://localhost:5000/api" // FIX 1: Explicitly include /api in the base URL
-    : "https://lifemirror.vercel.app/api"; // FIX 1: Explicitly include /api in the base URL
+    // 👇 CRITICAL CHANGE: Use the current origin for non-local deployment
+    : window.location.origin + "/api";
 
 // Central API URL helper
 /**

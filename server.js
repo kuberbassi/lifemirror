@@ -44,10 +44,9 @@ mongoose.connect(MONGO_URI)
 // Allowed origins array
 const allowedOrigins = [
     'http://localhost:5000',
-    'https://lifemirror-theta.vercel.app', 
-    'https://lifemirror.vercel.app',
+    'https://lifemirror.vercel.app', // Production URL
     // CRITICAL: Regex to cover all Vercel Preview Deployments 
-    /https:\/\/lifemirror(-[a-z0-9]+)?\.vercel\.app$/ 
+    /https:\/\/lifemirror(-[a-z0-9]+)?\.vercel\.app$/ // <-- The current regex (which is correct)
 ];
 
 const corsOptions = {
@@ -79,7 +78,7 @@ const corsOptions = {
     credentials: true, 
 };
 
-app.use(cors(corsOptions)); 
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // =======================================================
