@@ -635,7 +635,7 @@ function createApiService(resourceName, stateVarName) { // <<-- ADDED stateVarNa
 
 
         async update(id, data) {
-            // Trim the trailing slash from the base URL before appending the ID
+            // FIX: Trim trailing slash from baseUrl before appending ID
             const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
             const url = `${cleanBaseUrl}/${id}`; // CORRECT: /api/tasks/69050c...
             try {
@@ -675,6 +675,7 @@ function createApiService(resourceName, stateVarName) { // <<-- ADDED stateVarNa
         },
 
         async delete(id) {
+            // FIX: Trim trailing slash from baseUrl before appending ID
             const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
             const url = `${cleanBaseUrl}/${id}`; // CORRECT: /api/tasks/69050c...
             try {
@@ -1155,6 +1156,15 @@ async function updateGlobalUIElements() {
     const timeElement = document.getElementById('current-time');
     if (timeElement) {
         timeElement.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // --- NEW: Re-attach Notification Bell Listener ---
+    const bellIconWrapper = document.querySelector('.global-controls .control-icon-wrapper');
+    if (bellIconWrapper && !bellIconWrapper._listenerAttached) { // Only attach if not already done
+        const newBellIconWrapper = bellIconWrapper.cloneNode(true);
+        bellIconWrapper.parentNode.replaceChild(newBellIconWrapper, bellIconWrapper);
+        newBellIconWrapper.addEventListener('click', toggleNotificationPanel);
+        newBellIconWrapper._listenerAttached = true; // Mark it attached
     }
 
     // --- Update Profile Picture ---
@@ -1915,7 +1925,7 @@ function initializeTasksPageLogic() {
         try {
             await taskApiService.create(newTask);
             showFlashMessage('Task added successfully!', 'plus-circle');
-            await refreshState('tasks');
+            await refreshState('tasks'); // <-- CRITICAL: Ensures instant UI update
         } catch (error) { console.error("Failed to add task:", error); }
     }
 
@@ -2274,7 +2284,7 @@ function initializeFinancePage() {
             };
             await billApiService.update(billId, updateData);
             showFlashMessage(`${bill.name} ${bill.frequency === 'one-time' ? 'marked paid' : 'payment logged'}.`, 'check-circle');
-            await refreshState('bills');
+            await refreshState('bills'); // <-- CRITICAL: Ensures instant UI update
         } catch (error) {
             console.error("Failed to mark bill paid:", error);
         }
@@ -2383,7 +2393,7 @@ function initializeFinancePage() {
                 await billApiService.update(billData.id, updateData);
                 showFlashMessage('Bill updated successfully!', 'save');
             }
-            await refreshState('bills');
+            await refreshState('bills'); // <-- CRITICAL: Ensures instant UI update
         } catch (error) {
             console.error(`Failed to ${mode} bill:`, error);
         }
@@ -2697,7 +2707,7 @@ function initializeFitnessPage() {
         try {
             await fitnessApiService.create(newLog);
             showFlashMessage('Activity logged successfully!', 'check-circle');
-            await refreshState('fitness');
+            await refreshState('fitness'); // <-- CRITICAL: Ensures instant UI update
         } catch (error) {
             console.error("Failed to log fitness entry:", error);
         }
@@ -3361,7 +3371,7 @@ function initializeVaultPage() {
                 await assetApiService.update(assetData.id, updateData);
                 showFlashMessage('Link updated successfully!', 'save');
             }
-            await refreshState('assets');
+            await refreshState('assets'); // <-- CRITICAL: Ensures instant UI update
         } catch (error) { console.error(`Failed to ${mode} asset:`, error); }
     }
 
@@ -3742,6 +3752,31 @@ function initializeSettingsPage() {
         exportButton.addEventListener('click', exportButton._clickListener);
     }
 
+    // --- Make all toggles functional for the demo ---
+    const attachToggleListeners = () => {
+        const toggleSwitches = mainContentElement.querySelectorAll('.toggle-switch');
+        
+        // Attach listener to each toggle switch
+        toggleSwitches.forEach(toggle => {
+            // Remove any old listener before adding a new one (SPA safety)
+            if (toggle._toggleListener) {
+                toggle.removeEventListener('change', toggle._toggleListener);
+            }
+            
+            toggle._toggleListener = () => {
+                const settingName = toggle.id.replace('toggle-', '');
+                if (toggle.checked) {
+                    showFlashMessage(`${settingName} enabled.`, 'toggle-right');
+                } else {
+                    showFlashMessage(`${settingName} disabled.`, 'toggle-left');
+                }
+            };
+            toggle.addEventListener('change', toggle._toggleListener);
+        });
+    };
+    
+    // Call this new function at the end of initializeSettingsPage:
+    attachToggleListeners();
 
     console.log("Settings Page Initialized.");
 }
