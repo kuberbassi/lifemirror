@@ -41,28 +41,25 @@ mongoose.connect(MONGO_URI)
 // 2. Middleware Setup - CRITICAL CORS FIX APPLIED HERE
 // =======================================================
 
-// Allowed origins array for production deployment
+// Allowed origins array
 const allowedOrigins = [
     'http://localhost:5000',
     'https://lifemirror-theta.vercel.app', 
     'https://lifemirror.vercel.app',
-    // Regex to cover all Vercel Preview Deployments 
+    // CRITICAL: Regex to cover all Vercel Preview Deployments 
     /https:\/\/lifemirror(-[a-z0-9]+)?\.vercel\.app$/ 
 ];
 
 const corsOptions = {
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true); 
         
         let isAllowed = false;
 
-        // 1. Check static origins
         if (allowedOrigins.indexOf(origin) !== -1) {
             isAllowed = true;
         }
 
-        // 2. Check regex patterns
         if (!isAllowed) {
              for (const allowedOrigin of allowedOrigins) {
                  if (allowedOrigin instanceof RegExp && allowedOrigin.test(origin)) {
@@ -82,7 +79,7 @@ const corsOptions = {
     credentials: true, 
 };
 
-app.use(cors(corsOptions)); // Use the configured CORS middleware
+app.use(cors(corsOptions)); 
 app.use(express.json());
 
 // =======================================================
