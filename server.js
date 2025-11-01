@@ -156,7 +156,7 @@ app.use('/api/tasks', checkJwt, taskRoutes);
 app.use('/api/bills', checkJwt, billRoutes);
 app.use('/api/assets', checkJwt, assetRoutes);
 app.use('/api/fitness-logs', checkJwt, fitnessRoutes);
-app.use('/api/mood-logs', checkJwt, moodRoutes);
+app.use('/api/mood-logs', checkJwt, moodRoutes); // <-- Correctly uses /api/mood-logs
 app.use('/api/dashboard', checkJwt, dashboardRoutes);
 
 // =======================================================

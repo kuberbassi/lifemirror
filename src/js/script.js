@@ -523,8 +523,8 @@ window.addEventListener("online", flushCache);
 function createApiService(resourceName, stateVarName) { // <<-- ADDED stateVarName
     // ✅ Match frontend names to backend route prefixes
     const routeMap = {
-        'fitness-logs': 'fitness',
-        'mood-logs': 'mood',
+        'fitness-logs': 'fitness-logs',
+        'mood-logs': 'mood-logs', // Use the full route prefix
         'tasks': 'tasks',
         'assets': 'assets',
         'bills': 'bills',
@@ -1165,12 +1165,12 @@ async function updateGlobalUIElements() {
     if (bellIconWrapper && !bellIconWrapper._listenerAttached) {
         const newBellIconWrapper = bellIconWrapper.cloneNode(true);
         // Ensure the correct class is used for the bell wrapper
-        newBellIconWrapper.className = bellIconWrapper.className; 
-        
+        newBellIconWrapper.className = bellIconWrapper.className;
+
         bellIconWrapper.parentNode.replaceChild(newBellIconWrapper, bellIconWrapper);
         newBellIconWrapper.addEventListener('click', toggleNotificationPanel);
         // Use a property on the parent to check if the listener is active
-        newBellIconWrapper._listenerAttached = true; 
+        newBellIconWrapper._listenerAttached = true;
     }
 
     // --- Profile Picture Update (Retains Google/Auth0 Picture) ---
@@ -1341,6 +1341,13 @@ async function navigateToPage(pageName, isInitialLoad = false) {
     if (moodTrendChartInstance) { moodTrendChartInstance.destroy(); moodTrendChartInstance = null; }
     if (globalThis.insightsTaskChartInstance) { globalThis.insightsTaskChartInstance.destroy(); globalThis.insightsTaskChartInstance = null; }
 
+    // CRITICAL FIX: Ensure FullCalendar is destroyed and explicitly nulled.
+    if (window.calendar) { // <-- This is the instance created on tasks.html reload
+        console.log(`[Destroy] Destroying FullCalendar instance from ${currentPageName}.`);
+        window.calendar.destroy(); // <--- Must call the library's destruction method
+        window.calendar = null; // <--- Must explicitly null the global reference
+    }
+
     // 9. Initialize Page-Specific JavaScript Logic for the *new* content
     console.log(`Initializing JS for ${pageName}...`);
     await initializePageLogic(pageName);
@@ -1493,59 +1500,70 @@ function initializeDashboardPage() {
         updateElementText('kpi-vault-links', `${totalVaultLinks} Links`);
         updateElementText('kpi-vault-categories', `${uniqueCategories} Categories`);
 
+        // src/js/script.js - Inside renderDashboardMetrics function
+        // ... around line 1700
         // --- Radar Chart ---
         const radarCtx = document.getElementById('life-score-radar-chart')?.getContext('2d');
-        if (radarCtx && typeof Chart !== 'undefined') {
-            const chartData = {
-                labels: ['Tasks', 'Financial', 'Fitness', 'Mood/Stress', 'Digital Org'],
-                datasets: [{
-                    label: 'Score',
-                    data: [
-                        componentScores.tasks || 0,
-                        componentScores.finance || 0,
-                        componentScores.fitness || 0,
-                        componentScores.mood || 0,
-                        digitalScore || 0
-                    ],
-                    backgroundColor: 'rgba(0, 199, 166, 0.4)',
-                    borderColor: 'var(--c-primary)',
-                    borderWidth: 1.5,
-                    pointRadius: 4,
-                    pointBackgroundColor: 'var(--c-primary)'
-                }]
-            };
+        if (radarCtx) {
+            setTimeout(() => { // Introduce delay
+                if (typeof Chart === 'undefined') {
+                    console.warn("Chart.js missing for Dashboard Radar Chart.");
+                    return;
+                }
 
-            if (lifeScoreChartInstance) {
-                lifeScoreChartInstance.destroy();
-                lifeScoreChartInstance = null;
-            }
+                const chartData = {
+                    labels: ['Tasks', 'Financial', 'Fitness', 'Mood/Stress', 'Digital Org'],
+                    datasets: [{
+                        label: 'Score',
+                        data: [
+                            componentScores.tasks || 0,
+                            componentScores.finance || 0,
+                            componentScores.fitness || 0,
+                            componentScores.mood || 0,
+                            digitalScore || 0
+                        ],
+                        backgroundColor: 'rgba(0, 199, 166, 0.4)',
+                        borderColor: 'var(--c-primary)',
+                        borderWidth: 1.5,
+                        pointRadius: 4,
+                        pointBackgroundColor: 'var(--c-primary)'
+                    }]
+                };
 
-            try {
-                lifeScoreChartInstance = new Chart(radarCtx, {
-                    type: 'radar',
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            r: {
-                                suggestedMin: 0,
-                                suggestedMax: 100,
-                                ticks: { stepSize: 25, backdropColor: 'transparent' },
-                                pointLabels: { padding: 15, font: { size: 12 } },
-                                grid: { color: '#eaeaea' },
-                                angleLines: { color: '#eaeaea' }
+                if (lifeScoreChartInstance) {
+                    lifeScoreChartInstance.destroy();
+                    lifeScoreChartInstance = null;
+                }
+
+                try {
+                    lifeScoreChartInstance = new Chart(radarCtx, {
+                        type: 'radar',
+                        data: chartData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            layout: {
+                                padding: 20
+                            },
+                            scales: {
+                                r: {
+                                    suggestedMin: 0,
+                                    suggestedMax: 100,
+                                    ticks: { stepSize: 25, backdropColor: 'transparent' },
+                                    pointLabels: { padding: 10, font: { size: 12 } },
+                                    grid: { color: '#eaeaea' },
+                                    angleLines: { color: '#eaeaea' }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
                             }
-                        },
-                        plugins: {
-                            legend: { display: false }
                         }
-                    }
-                });
-            } catch (chartError) {
-                console.error("Error creating Radar Chart:", chartError);
-            }
-
+                    });
+                } catch (chartError) {
+                    console.error("Error creating Radar Chart:", chartError);
+                }
+            }, 100); // End of setTimeout
         }
 
 
@@ -2042,7 +2060,7 @@ function initializeTasksPageLogic() {
         }
 
         if (window.calendar) {
-            window.calendar.destroy();
+            window.calendar.destroy(); // <--- This ensures the old one is properly removed
             window.calendar = null;
         }
 
@@ -2098,8 +2116,15 @@ function initializeTasksPageLogic() {
         try {
             const isAuthenticated = await window.auth0Client.isAuthenticated();
             if (isAuthenticated) {
-                calendarOverlay.style.display = 'none';
-                tryInitializeCalendar();
+                // CRITICAL FIX: Wrap initialization in a delay to wait for FullCalendar's script to execute
+                setTimeout(() => {
+                    if (typeof FullCalendar === 'undefined') {
+                        console.warn("FullCalendar library object not yet loaded, aborting calendar init.");
+                        return;
+                    }
+                    tryInitializeCalendar();
+                    calendarOverlay.style.display = 'none';
+                }, 100); // 100ms delay to ensure library loads
             } else {
                 calendarOverlay.style.display = 'flex';
                 if (window.calendar) { window.calendar.destroy(); window.calendar = null; }
@@ -2599,106 +2624,113 @@ function initializeFitnessPage() {
 
         // --- Render Fitness Trend Chart ---
         const fitnessChartCtx = fitnessChartCanvas?.getContext('2d');
-        if (fitnessChartCtx && typeof Chart !== 'undefined') {
-            const last7DaysLabels = [];
-            const last7DaysSteps = [];
-            const last7DaysWorkout = [];
+        if (fitnessChartCtx) {
+            setTimeout(() => { // Introduce delay
+                if (typeof Chart === 'undefined') {
+                    console.warn("Chart.js missing for Fitness Trend Chart.");
+                    if (chartPlaceholder) chartPlaceholder.style.display = 'flex';
+                    if (fitnessChartCanvas) fitnessChartCanvas.style.display = 'none';
+                    return;
+                }
 
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const dateStr = getTodayDateString(d);
-                last7DaysLabels.push(dateStr);
+                // ... (data preparation is unchanged) ...
+                const last7DaysLabels = [];
+                const last7DaysSteps = [];
+                const last7DaysWorkout = [];
 
-                const steps = safeHistory
-                    .filter(log => log.date === dateStr && log.type === 'steps')
-                    .reduce((sum, log) => sum + (log.value || 0), 0);
-                last7DaysSteps.push(steps);
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    const dateStr = getTodayDateString(d);
+                    last7DaysLabels.push(dateStr);
 
-                const workoutMins = safeHistory
-                    .filter(log => log.date === dateStr && log.type === 'workout')
-                    .reduce((sum, log) => sum + (log.value || 0), 0);
-                last7DaysWorkout.push(workoutMins);
-            }
+                    const steps = safeHistory
+                        .filter(log => log.date === dateStr && log.type === 'steps')
+                        .reduce((sum, log) => sum + (log.value || 0), 0);
+                    last7DaysSteps.push(steps);
 
-            const chartData = {
-                labels: last7DaysLabels.map(d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })),
-                datasets: [
-                    {
-                        label: 'Steps',
-                        data: last7DaysSteps,
-                        borderColor: 'var(--c-primary)',
-                        backgroundColor: 'rgba(0, 199, 166, 0.1)',
-                        tension: 0.3,
-                        yAxisID: 'ySteps',
-                        fill: true,
-                        order: 1
-                    },
-                    {
-                        label: 'Workout (min)',
-                        data: last7DaysWorkout,
-                        borderColor: 'var(--c-accent-blue)',
-                        backgroundColor: 'rgba(2, 119, 189, 0.5)',
+                    const workoutMins = safeHistory
+                        .filter(log => log.date === dateStr && log.type === 'workout')
+                        .reduce((sum, log) => sum + (log.value || 0), 0);
+                    last7DaysWorkout.push(workoutMins);
+                }
+
+                const chartData = {
+                    labels: last7DaysLabels.map(d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })),
+                    datasets: [
+                        {
+                            label: 'Steps',
+                            data: last7DaysSteps,
+                            borderColor: 'var(--c-primary)',
+                            backgroundColor: 'rgba(0, 199, 166, 0.1)',
+                            tension: 0.3,
+                            yAxisID: 'ySteps',
+                            fill: true,
+                            order: 1
+                        },
+                        {
+                            label: 'Workout (min)',
+                            data: last7DaysWorkout,
+                            borderColor: 'var(--c-accent-blue)',
+                            backgroundColor: 'rgba(2, 119, 189, 0.5)',
+                            type: 'bar',
+                            yAxisID: 'yWorkout',
+                            order: 2
+                        }
+                    ]
+                };
+
+                if (fitnessTrendChartInstance) {
+                    fitnessTrendChartInstance.destroy();
+                    fitnessTrendChartInstance = null;
+                }
+
+                try {
+                    fitnessTrendChartInstance = new Chart(fitnessChartCtx, {
                         type: 'bar',
-                        yAxisID: 'yWorkout',
-                        order: 2
-                    }
-                ]
-            };
-
-            if (fitnessTrendChartInstance) {
-                fitnessTrendChartInstance.destroy();
-                fitnessTrendChartInstance = null;
-            }
-
-            try {
-                fitnessTrendChartInstance = new Chart(fitnessChartCtx, {
-                    type: 'bar',
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { grid: { display: false } },
-                            ySteps: {
-                                position: 'left',
-                                title: { display: true, text: 'Steps' },
-                                beginAtZero: true,
-                                grid: { color: '#eaeaea' }
+                        data: chartData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { grid: { display: false } },
+                                ySteps: {
+                                    position: 'left',
+                                    title: { display: true, text: 'Steps' },
+                                    beginAtZero: true,
+                                    grid: { color: '#eaeaea' }
+                                },
+                                yWorkout: {
+                                    position: 'right',
+                                    title: { display: true, text: 'Workout (min)' },
+                                    beginAtZero: true,
+                                    grid: { drawOnChartArea: false }
+                                }
                             },
-                            yWorkout: {
-                                position: 'right',
-                                title: { display: true, text: 'Workout (min)' },
-                                beginAtZero: true,
-                                grid: { drawOnChartArea: false }
-                            }
-                        },
-                        plugins: {
-                            legend: { position: 'bottom' },
-                            tooltip: { mode: 'index', intersect: false }
-                        },
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                    }
-                });
-                if (chartPlaceholder) chartPlaceholder.style.display = 'none';
-                if (fitnessChartCanvas) fitnessChartCanvas.style.display = 'block';
-            } catch (chartError) {
-                console.error("Error creating Fitness Trend Chart:", chartError);
-                if (chartPlaceholder) chartPlaceholder.style.display = 'flex';
-                if (fitnessChartCanvas) fitnessChartCanvas.style.display = 'none';
-            }
-
-
+                            plugins: {
+                                legend: { position: 'bottom' },
+                                tooltip: { mode: 'index', intersect: false }
+                            },
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                        }
+                    });
+                    if (chartPlaceholder) chartPlaceholder.style.display = 'none';
+                    if (fitnessChartCanvas) fitnessChartCanvas.style.display = 'block';
+                } catch (chartError) {
+                    console.error("Error creating Fitness Trend Chart:", chartError);
+                    if (chartPlaceholder) chartPlaceholder.style.display = 'flex';
+                    if (fitnessChartCanvas) fitnessChartCanvas.style.display = 'none';
+                }
+            }, 100); // End of setTimeout
         } else if (fitnessChartCanvas) {
             if (chartPlaceholder) chartPlaceholder.style.display = 'flex';
             fitnessChartCanvas.style.display = 'none';
         } else {
             if (chartPlaceholder) chartPlaceholder.style.display = 'flex';
         }
-
 
         try { feather.replace(); } catch (e) { console.warn("Feather replace failed in fitness render:", e); }
 
@@ -2929,69 +2961,79 @@ function initializeMoodPage() {
 
         // --- Render Mood Trend Chart ---
         const moodChartCtx = moodChartCanvas?.getContext('2d');
-        if (moodChartCtx && typeof Chart !== 'undefined') {
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-            const thirtyDaysAgoStr = getTodayDateString(thirtyDaysAgo);
+        if (moodChartCtx) {
+            setTimeout(() => { // Introduce delay
+                if (typeof Chart === 'undefined') {
+                    console.warn("Chart.js missing for Mood Trend Chart.");
+                    if (moodChartPlaceholder) moodChartPlaceholder.style.display = 'flex';
+                    if (moodChartCanvas) moodChartCanvas.style.display = 'none';
+                    return;
+                }
 
-            const last30DaysData = safeMoodHistory
-                .filter(log => log.id !== 'temp-mood' && log.date >= thirtyDaysAgoStr && log.date <= TODAY_DATE)
-                .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+                // ... (data preparation is unchanged) ...
+                const safeMoodHistory = Array.isArray(moodHistory) ? moodHistory : [];
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+                const thirtyDaysAgoStr = getTodayDateString(thirtyDaysAgo);
 
-            const chartData = {
-                labels: last30DaysData.map(log => new Date(log.date + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })),
-                datasets: [{
-                    label: 'Mood',
-                    data: last30DaysData.map(log => log.mood),
-                    borderColor: 'var(--c-primary)',
-                    backgroundColor: 'rgba(0, 199, 166, 0.1)',
-                    tension: 0.3,
-                    fill: true,
-                    pointRadius: 3,
-                    pointBackgroundColor: 'var(--c-primary)'
-                }]
-            };
+                const last30DaysData = safeMoodHistory
+                    .filter(log => log.id !== 'temp-mood' && log.date >= thirtyDaysAgoStr && log.date <= TODAY_DATE)
+                    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-            if (moodTrendChartInstance) {
-                moodTrendChartInstance.destroy();
-                moodTrendChartInstance = null;
-            }
+                const chartData = {
+                    labels: last30DaysData.map(log => new Date(log.date + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })),
+                    datasets: [{
+                        label: 'Mood',
+                        data: last30DaysData.map(log => log.mood),
+                        borderColor: 'var(--c-primary)',
+                        backgroundColor: 'rgba(0, 199, 166, 0.1)',
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: 'var(--c-primary)'
+                    }]
+                };
 
-            try {
-                moodTrendChartInstance = new Chart(moodChartCtx, {
-                    type: 'line',
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { grid: { display: false } },
-                            y: {
-                                min: 0,
-                                max: 4,
-                                ticks: {
-                                    stepSize: 1,
-                                    callback: function (value) {
-                                        return Object.values(moodMap).find(m => m.value === value)?.label || '';
-                                    }
-                                },
-                                grid: { color: '#eaeaea' }
+                if (moodTrendChartInstance) {
+                    moodTrendChartInstance.destroy();
+                    moodTrendChartInstance = null;
+                }
+
+                try {
+                    moodTrendChartInstance = new Chart(moodChartCtx, {
+                        type: 'line',
+                        data: chartData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { grid: { display: false } },
+                                y: {
+                                    min: 0,
+                                    max: 4,
+                                    ticks: {
+                                        stepSize: 1,
+                                        callback: function (value) {
+                                            return Object.values(moodMap).find(m => m.value === value)?.label || '';
+                                        }
+                                    },
+                                    grid: { color: '#eaeaea' }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
                             }
-                        },
-                        plugins: {
-                            legend: { display: false }
                         }
-                    }
-                });
-                if (moodChartPlaceholder) moodChartPlaceholder.style.display = 'none';
-                if (moodChartCanvas) moodChartCanvas.style.display = 'block';
+                    });
+                    if (moodChartPlaceholder) moodChartPlaceholder.style.display = 'none';
+                    if (moodChartCanvas) moodChartCanvas.style.display = 'block';
 
-            } catch (chartError) {
-                console.error("Error creating Mood Trend Chart:", chartError);
-                if (moodChartPlaceholder) moodChartPlaceholder.style.display = 'flex';
-                if (moodChartCanvas) moodChartCanvas.style.display = 'none';
-            }
-
+                } catch (chartError) {
+                    console.error("Error creating Mood Trend Chart:", chartError);
+                    if (moodChartPlaceholder) moodChartPlaceholder.style.display = 'flex';
+                    if (moodChartCanvas) moodChartCanvas.style.display = 'none';
+                }
+            }, 100); // End of setTimeout
         } else if (moodChartCanvas) {
             if (moodChartPlaceholder) moodChartPlaceholder.style.display = 'flex';
             moodChartCanvas.style.display = 'none';
@@ -3533,42 +3575,51 @@ function initializeInsightsPage() {
 
     // --- Task Completion Trend Chart (Mock/Example) ---
     if (insightsChartCanvas) {
-        const insightsChartCtx = insightsChartCanvas.getContext('2d');
-        const weeksLabels = ["Week -3", "Week -2", "Week -1", "This Week"];
-        const weeksCompletionData = [75, 80, 70, 85]; // Mock data
+        setTimeout(() => { // Introduce delay
+            if (typeof Chart === 'undefined') {
+                console.warn("Insights page: Chart.js library not loaded. Cannot render charts.");
+                if (insightsChartPlaceholder) insightsChartPlaceholder.style.display = 'flex';
+                if (insightsChartCanvas) insightsChartCanvas.style.display = 'none';
+                return;
+            }
 
-        const taskTrendData = {
-            labels: weeksLabels,
-            datasets: [{
-                label: 'Task Completion %',
-                data: weeksCompletionData,
-                borderColor: 'var(--c-primary)',
-                backgroundColor: 'rgba(0, 199, 166, 0.1)',
-                tension: 0.3,
-                fill: true
-            }]
-        };
+            const insightsChartCtx = insightsChartCanvas.getContext('2d');
+            const weeksLabels = ["Week -3", "Week -2", "Week -1", "This Week"];
+            const weeksCompletionData = [75, 80, 70, 85]; // Mock data
 
-        if (globalThis.insightsTaskChartInstance) globalThis.insightsTaskChartInstance.destroy();
+            const taskTrendData = {
+                labels: weeksLabels,
+                datasets: [{
+                    label: 'Task Completion %',
+                    data: weeksCompletionData,
+                    borderColor: 'var(--c-primary)',
+                    backgroundColor: 'rgba(0, 199, 166, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            };
 
-        try {
-            globalThis.insightsTaskChartInstance = new Chart(insightsChartCtx, {
-                type: 'line',
-                data: taskTrendData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'Completion Rate (%)' } } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-            if (insightsChartPlaceholder) insightsChartPlaceholder.style.display = 'none';
-            insightsChartCanvas.style.display = 'block';
-        } catch (chartError) {
-            console.error("Error creating Insights task trend chart:", chartError);
-            if (insightsChartPlaceholder) insightsChartPlaceholder.style.display = 'flex';
-            insightsChartCanvas.style.display = 'none';
-        }
+            if (globalThis.insightsTaskChartInstance) globalThis.insightsTaskChartInstance.destroy();
+
+            try {
+                globalThis.insightsTaskChartInstance = new Chart(insightsChartCtx, {
+                    type: 'line',
+                    data: taskTrendData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'Completion Rate (%)' } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+                if (insightsChartPlaceholder) insightsChartPlaceholder.style.display = 'none';
+                insightsChartCanvas.style.display = 'block';
+            } catch (chartError) {
+                console.error("Error creating Insights task trend chart:", chartError);
+                if (insightsChartPlaceholder) insightsChartPlaceholder.style.display = 'flex';
+                insightsChartCanvas.style.display = 'none';
+            }
+        }, 100); // End of setTimeout
     }
 
 
@@ -3768,12 +3819,12 @@ function initializeSettingsPage() {
     // --- Make all toggles functional for the demo ---
     const attachToggleListeners = () => {
         const toggleSwitches = mainContentElement.querySelectorAll('.toggle-switch');
-        
+
         toggleSwitches.forEach(toggle => {
             if (toggle._toggleListener) {
                 toggle.removeEventListener('change', toggle._toggleListener);
             }
-            
+
             toggle._toggleListener = () => {
                 const settingName = toggle.id.replace('toggle-', '');
                 if (toggle.checked) {
@@ -3785,7 +3836,7 @@ function initializeSettingsPage() {
             toggle.addEventListener('change', toggle._toggleListener);
         });
     };
-    
+
     // Call this new function at the end of initializeSettingsPage:
     attachToggleListeners();
 
@@ -3878,6 +3929,26 @@ window.addEventListener("DOMContentLoaded", async () => {
         document.body.innerHTML = "<h1>Application Error</h1><p>Core application structure missing. Cannot load content.</p>";
         return;
     }
+    // NEW LOGIC: Inject global modals if not present.
+    // Modals are only defined in index.html, so we fetch and inject them to support direct links.
+    if (!document.getElementById('add-bill-modal')) { // Check for a known modal ID
+        console.log("Injecting global modals from index.html template...");
+        try {
+            const modalResponse = await fetch('/index.html?v=' + Date.now());
+            const modalHtmlText = await modalResponse.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(modalHtmlText, 'text/html');
+            // Select ALL modal overlays from the bottom of index.html
+            const modalElements = doc.querySelectorAll('.modal-overlay');
+            modalElements.forEach(modal => {
+                // Append the detached modal element to the current document body
+                document.body.appendChild(modal);
+            });
+            console.log("✅ Global modals injected successfully.");
+        } catch (e) {
+            console.error("Failed to inject global modal elements:", e);
+        }
+    }
 
     // --- Setup Navigation Link Listeners (using delegation on sidebar) ---
     const sidebar = document.querySelector('.sidebar');
@@ -3923,37 +3994,43 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.log("Global UI setup complete.");
 
     // --- Phase 5: Initial Data Loading ---
-    // The previous ensureAuthReady call guarantees the user is logged in for this
     console.log("Phase 5: Starting application state sync...");
-    await syncApplicationState();
-
+    await syncApplicationState(); // CRITICAL: Ensure data is loaded first
 
     // --- Phase 6: Initial Global UI Update ---
     console.log("Phase 6: Performing Initial Global UI Update...");
-    await updateGlobalUIElements(); // Update clock, profile pic
-
+    await updateGlobalUIElements();
 
     // --- Phase 7: Load Initial Page Content ---
     console.log("Phase 7: Initializing page content based on URL:", pathPageName);
 
-    // Ensure the correct sidebar item is marked active based on the initial URL path
+    // Get the page name from the actual URL loaded by the browser
+    const currentUrlPageName = window.location.pathname.split('/').pop() || 'index.html';
+
+    // 1. Ensure the correct sidebar item is marked active
     document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.toggle('active', item.dataset.page === pathPageName);
     });
 
-    // Replace history state for the initial load if it wasn't a callback clean
+    // 2. Replace history state for the initial load if it wasn't a callback clean
     if (!callbackProcessed) {
         const initialPage = pathPageName === 'index.html' ? '/index.html' : `/${pathPageName}`;
         window.history.replaceState({ page: pathPageName }, '', initialPage);
     }
 
-    // Initialize the content
-    if (pathPageName === 'index.html') {
-        initializeDashboardPage();
-        currentPageName = 'index.html';
+    // **THE CRITICAL DECISION POINT**
+    if (pathPageName === currentUrlPageName && !callbackProcessed) {
+        // Scenario A: Direct browser refresh on a sub-page (e.g., /tasks.html).
+        // The HTML content is already loaded and correct. Just run the JS initializer.
+        console.log(`[Init] Direct load detected for ${pathPageName}. Running JS init only.`);
+        currentPageName = pathPageName;
+        // This runs the functions like initializeTasksPageLogic()
+        await initializePageLogic(pathPageName);
     } else {
-        // Use navigateToPage to fetch, inject, and initialize non-index pages
-        await navigateToPage(pathPageName, true); // true = isInitialLoad (don't push history)
+        // Scenario B: Auth0 redirecting, or a callback targetting a different page than the static root (e.g. redirect to /tasks.html but we only loaded index.html).
+        // Use the full navigation flow to fetch and inject the correct content.
+        console.log(`[Init] Dynamic initial load needed for ${pathPageName}. Running full navigation.`);
+        await navigateToPage(pathPageName, true);
     }
 
 
