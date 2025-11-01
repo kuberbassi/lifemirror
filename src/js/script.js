@@ -634,6 +634,7 @@ function createApiService(resourceName, stateVarName) { // <<-- ADDED stateVarNa
         },
 
 
+        // 1. Fix api.update (around line 681)
         async update(id, data) {
             // FIX: Trim trailing slash from baseUrl before appending ID
             const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -674,6 +675,7 @@ function createApiService(resourceName, stateVarName) { // <<-- ADDED stateVarNa
             }
         },
 
+        // 2. Fix api.delete (around line 726)
         async delete(id) {
             // FIX: Trim trailing slash from baseUrl before appending ID
             const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -1158,16 +1160,20 @@ async function updateGlobalUIElements() {
         timeElement.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // --- NEW: Re-attach Notification Bell Listener ---
+    // --- FIX: Re-attach Notification Bell Listener ---
     const bellIconWrapper = document.querySelector('.global-controls .control-icon-wrapper');
-    if (bellIconWrapper && !bellIconWrapper._listenerAttached) { // Only attach if not already done
+    if (bellIconWrapper && !bellIconWrapper._listenerAttached) {
         const newBellIconWrapper = bellIconWrapper.cloneNode(true);
+        // Ensure the correct class is used for the bell wrapper
+        newBellIconWrapper.className = bellIconWrapper.className; 
+        
         bellIconWrapper.parentNode.replaceChild(newBellIconWrapper, bellIconWrapper);
         newBellIconWrapper.addEventListener('click', toggleNotificationPanel);
-        newBellIconWrapper._listenerAttached = true; // Mark it attached
+        // Use a property on the parent to check if the listener is active
+        newBellIconWrapper._listenerAttached = true; 
     }
 
-    // --- Update Profile Picture ---
+    // --- Profile Picture Update (Retains Google/Auth0 Picture) ---
     const profilePicContainer = document.querySelector('.global-controls');
     let profilePicElement = profilePicContainer?.querySelector('.profile-pic, .profile-pic-initials');
 
@@ -1311,6 +1317,13 @@ async function navigateToPage(pageName, isInitialLoad = false) {
 
     // 5. Update Global State (Current Page Name)
     currentPageName = pageName;
+
+    // --- FIX: Force full data sync when navigating to the Dashboard ---
+    if (pageName === 'index.html' && !isInitialLoad) {
+        console.log("Dashboard navigation detected. Forcing full state sync.");
+        // syncApplicationState() will re-fetch all 5 data streams (tasks, bills, etc.)
+        await syncApplicationState();
+    }
 
     // 6. Update Browser History/URL Bar
     if (!isInitialLoad) {
@@ -3756,9 +3769,7 @@ function initializeSettingsPage() {
     const attachToggleListeners = () => {
         const toggleSwitches = mainContentElement.querySelectorAll('.toggle-switch');
         
-        // Attach listener to each toggle switch
         toggleSwitches.forEach(toggle => {
-            // Remove any old listener before adding a new one (SPA safety)
             if (toggle._toggleListener) {
                 toggle.removeEventListener('change', toggle._toggleListener);
             }
