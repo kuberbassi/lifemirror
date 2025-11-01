@@ -115,24 +115,26 @@ app.get('/vendor/auth0-spa-js.production.js', (req, res) => {
 // 3. Auth0 JWT Middleware (Backend Security)
 // =======================================================
 // Ensure required environment variables are set
-if (!process.env.AUTH0_ISSUER_BASE_URL || !process.env.AUTH0_AUDIENCE) {
-    console.error("FATAL ERROR: AUTH0_ISSUER_BASE_URL and/or AUTH0_AUDIENCE are not defined in the .env file.");
-    process.exit(1);
+// Normalize issuer base URL (remove trailing slash if present)
+const issuerBase = (process.env.AUTH0_ISSUER_BASE_URL || '').replace(/\/+$/, '');
+// Basic env checks
+if (!issuerBase || !process.env.AUTH0_AUDIENCE) {
+  console.error("FATAL ERROR: AUTH0_ISSUER_BASE_URL and/or AUTH0_AUDIENCE are not defined in the .env file.");
+  process.exit(1);
 }
 
 const checkJwt = jwt({
-    secret: jwksRsa.expressJwtSecret({
-        cache: true,
-        rateLimit: true,
-        jwksRequestsPerMinute: 5,
-        // REMOVED the slash before ".well-known"
-        jwksUri: `${process.env.AUTH0_ISSUER_BASE_URL}.well-known/jwks.json`
-    }),
-    audience: process.env.AUTH0_AUDIENCE,
-    // FIXED the issuer to just be the base URL (removed extra "/")
-    issuer: `${process.env.AUTH0_ISSUER_BASE_URL}`,
-    algorithms: ['RS256']
+  secret: jwksRsa.expressJwtSecret({
+    cache: true,
+    rateLimit: true,
+    jwksRequestsPerMinute: 5,
+    jwksUri: `${issuerBase}/.well-known/jwks.json`
+  }),
+  audience: process.env.AUTH0_AUDIENCE,
+  issuer: `${issuerBase}/`,
+  algorithms: ['RS256']
 });
+
 
 // Global error handler specifically for JWT errors
 app.use((err, req, res, next) => {
