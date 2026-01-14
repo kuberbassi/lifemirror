@@ -7,28 +7,14 @@
         },
         {
             "src": "client/package.json",
-            "use": "@vercel/static-build",
-            "config": {
-                "distDir": "dist"
-            }
+            "use": "@vercel/static-build"
         }
     ],
     "routes": [
-        {
-            "src": "/api/(.*)",
-            "dest": "/backend/server.js"
-        },
-        {
-            "src": "/assets/(.*)",
-            "dest": "/client/dist/assets/$1"
-        },
-        {
-            "src": "/favicon.svg",
-            "dest": "/client/dist/favicon.svg"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/client/dist/index.html"
-        }
+        { "src": "/api/(.*)", "dest": "/backend/server.js" },
+        { "src": "/assets/(.*)", "dest": "/client/dist/assets/$1" },
+        { "src": "/favicon.svg", "dest": "/client/dist/favicon.svg" },
+        { "handle": "filesystem" },
+        { "src": "/(.*)", "dest": "/client/dist/index.html" }
     ]
 }
