@@ -20,15 +20,15 @@
         },
         {
             "src": "/assets/(.*)",
-            "dest": "/client/assets/$1"
+            "dest": "/client/dist/assets/$1"
         },
         {
             "src": "/favicon.svg",
-            "dest": "/client/favicon.svg"
+            "dest": "/client/dist/favicon.svg"
         },
         {
             "src": "/(.*)",
-            "dest": "/client/index.html"
+            "dest": "/client/dist/index.html"
         }
     ]
 }
