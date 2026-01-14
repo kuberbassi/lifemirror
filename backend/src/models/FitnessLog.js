@@ -6,7 +6,7 @@ const FitnessLogSchema = new mongoose.Schema({
     time: { type: String, required: true }, // 'HH:MM'
     type: {
         type: String,
-        enum: ['steps', 'workout', 'sleep', 'calories_out', 'water_intake'],
+        enum: ['steps', 'workout', 'sleep', 'calories_out', 'water_intake', 'weight'],
         required: true
     },
     value: { type: Number, required: true },
