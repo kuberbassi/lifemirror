@@ -72,7 +72,6 @@ const Fitness: React.FC = () => {
     const todayLogs = logs.filter(l => l.date === today);
     const totalSteps = todayLogs.filter(l => l.type === 'steps').reduce((acc, curr) => acc + curr.value, 0);
     const totalCalories = todayLogs.filter(l => l.type === 'calories_out').reduce((acc, curr) => acc + curr.value, 0);
-    const totalSleep = todayLogs.filter(l => l.type === 'sleep').reduce((acc, curr) => acc + curr.value, 0);
 
     // Get latest weight
     const weightLogs = logs.filter(l => l.type === 'weight').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
